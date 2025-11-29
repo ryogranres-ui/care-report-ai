@@ -1,11 +1,98 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8">
-  <title>Care Report AI - 初期版</title>
+  <meta charset="UTF-8" />
+  <title>Care Report AI - 報告サポート（試作）</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="app.css" />
 </head>
 <body>
-  <h1>Care Report AI（初期版）</h1>
-  <p>このページはプロジェクトの初期テストページです。正常に表示されています。</p>
+  <header class="header">
+    <h1>Care Report AI（試作版）</h1>
+    <p class="header__subtitle">
+      質問に答えるだけで、<strong>伝わる報告文</strong>を自動で組み立てる練習ツールです。
+    </p>
+    <p class="header__note">
+      ※まだ AI 接続前の<strong>デモ版</strong>です。現場での報告練習にお使いください。
+    </p>
+  </header>
+
+  <main class="container">
+    <section class="card">
+      <h2>1. 報告内容を入力</h2>
+      <form id="report-form" class="form">
+        <div class="field">
+          <label for="level">あなたの立場</label>
+          <select id="level" name="level">
+            <option value="新人">新人</option>
+            <option value="中堅">中堅</option>
+            <option value="管理者">管理者・リーダー</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label for="title">短い件名（どんな報告？） <span class="badge">必須</span></label>
+          <input id="title" type="text" placeholder="例：A様の転倒について" required />
+        </div>
+
+        <div class="field">
+          <label for="whenWhere">いつ・どこで？ <span class="badge">必須</span></label>
+          <textarea id="whenWhere" rows="2"
+            placeholder="例：本日11時ごろ、2階食堂にて。"
+            required></textarea>
+        </div>
+
+        <div class="field">
+          <label for="whoWhat">どの利用者様に、何が起きた？ <span class="badge">必須</span></label>
+          <textarea id="whoWhat" rows="3"
+            placeholder="例：A様が立ち上がろうとした際、バランスを崩して床に尻もちをつかれました。"
+            required></textarea>
+        </div>
+
+        <div class="field">
+          <label for="careAction">その時あなたはどう対応した？ <span class="badge">必須</span></label>
+          <textarea id="careAction" rows="3"
+            placeholder="例：直ちに駆け寄り、痛みの有無を確認しつつ体位を整えました。バイタル測定を実施し、氷嚢で冷却しました。"
+            required></textarea>
+        </div>
+
+        <div class="field">
+          <label for="currentStatus">今の状態・変化</label>
+          <textarea id="currentStatus" rows="2"
+            placeholder="例：現在も歩行時に軽い痛みを訴えていますが、普段通り会話はできています。"></textarea>
+        </div>
+
+        <div class="field">
+          <label for="request">相手にどうしてほしい？（相談・報告のゴール）</label>
+          <textarea id="request" rows="2"
+            placeholder="例：今後の観察ポイントと、ご家族への説明内容についてご指示いただきたいです。"></textarea>
+        </div>
+
+        <button type="submit" class="btn-primary">報告文をつくる</button>
+      </form>
+    </section>
+
+    <section id="result-section" class="card card--result hidden">
+      <h2>2. 生成された報告文</h2>
+      <textarea id="report-output" class="output" rows="12" readonly></textarea>
+
+      <div class="score-block">
+        <p class="score-block__label">報告スコア（練習用）</p>
+        <p class="score-block__score"><span id="score-value">0</span> / 100 点</p>
+        <p class="score-block__level" id="score-level"></p>
+      </div>
+
+      <div class="feedback">
+        <h3>フィードバック</h3>
+        <ul id="feedback-list"></ul>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <p>© 2025 Care Report AI（試作）｜現場の「伝わらない報告」をゼロにする練習ツール</p>
+  </footer>
+
+  <script src="app.js" defer></script>
 </body>
 </html>
