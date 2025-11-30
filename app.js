@@ -10,7 +10,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   if (!generateBtn) return;
 
-  generateBtn.addEventListener("click", () => {
+  generateBtn.addEventListener("click", async () => {
     // 入力値を取得
     const reporterName = getValue("reporter-name");
     const position = getValue("position");
@@ -53,7 +53,7 @@ document.addEventListener("DOMContentLoaded", () => {
       outputArea.value = reportText;
     }
 
-    // スコア計算
+    // ── まずはローカルロジックでスコア＆フィードバック表示（即レスポンス用） ──
     const scoreResult = calcScore({
       what,
       when,
@@ -80,7 +80,72 @@ document.addEventListener("DOMContentLoaded", () => {
       scoreLevelEl.textContent = `レベル：${feedback.levelLabel}`;
     }
     if (scoreCommentEl) {
-      scoreCommentEl.textContent = feedback.comment;
+      scoreCommentEl.textContent =
+        feedback.comment + "\n\nAIによる詳細フィードバックを生成中です…";
+    }
+
+    // ── ここから AI API を呼んで、結果で上書き ──
+    try {
+      const apiUrl = "https://care-report-ai.vercel.app/api/evaluate-report";
+
+      const res = await fetch(apiUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          reportText,
+          fields: {
+            reporterName,
+            position,
+            what,
+            when,
+            where,
+            who,
+            bpSys,
+            bpDia,
+            pulse,
+            spo2,
+            temp,
+            state,
+            action,
+            goalKind,
+            goalDetail,
+          },
+        }),
+      });
+
+      if (!res.ok) {
+        console.error("AI API error", res.status);
+        if (scoreCommentEl) {
+          scoreCommentEl.textContent =
+            feedback.comment +
+            "\n\n※ AI 連携でエラーが発生したため、ローカル版フィードバックのみ表示しています。";
+        }
+        return;
+      }
+
+      const data = await res.json();
+
+      if (typeof data.score === "number" && scoreNumberEl) {
+        scoreNumberEl.textContent = String(data.score);
+      }
+      if (data.levelLabel && scoreLevelEl) {
+        scoreLevelEl.textContent = `レベル：${data.levelLabel}`;
+      }
+      if (data.comment && scoreCommentEl) {
+        scoreCommentEl.textContent = data.comment;
+      }
+
+      // 書き直し案はまずコンソールに出す。UIに載せたくなったらあとでボックス作ろう
+      if (data.rewriteExample) {
+        console.log("AI 書き直し案:\n", data.rewriteExample);
+      }
+    } catch (err) {
+      console.error("AI fetch error", err);
+      if (scoreCommentEl) {
+        scoreCommentEl.textContent =
+          feedback.comment +
+          "\n\n※ AI 連携に失敗したため、ローカル版フィードバックのみ表示しています。";
+      }
     }
   });
 });
@@ -113,7 +178,9 @@ function buildReportText(data) {
 
   if (data.when || data.where) {
     lines.push(
-      `● 発生日時・場所：${fallback(data.when)}　／　${fallback(data.where)}`
+      `● 発生日時・場所：${fallback(data.when)}　／　${fallback(
+        data.where
+      )}`
     );
   }
 
