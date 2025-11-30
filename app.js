@@ -1,79 +1,97 @@
-// Care Report AI 試作版
-// フォーム入力から報告文を自動生成するだけのシンプル版です。
+const eventDetailInput = document.getElementById("eventDetail");
+const eventTimeInput = document.getElementById("eventTime");
+const eventPlaceInput = document.getElementById("eventPlace");
+const eventPersonInput = document.getElementById("eventPerson");
 
-document.addEventListener("DOMContentLoaded", () => {
-  const form = document.getElementById("reportForm");
-  const roleInput = document.getElementById("role");
-  const titleInput = document.getElementById("title");
-  const whenWhereInput = document.getElementById("whenWhere");
-  const whatHappenedInput = document.getElementById("whatHappened");
-  const yourActionInput = document.getElementById("yourAction");
-  const currentStatusInput = document.getElementById("currentStatus");
-  const requestToOtherInput = document.getElementById("requestToOther");
+const vitalBpHighInput = document.getElementById("vitalBpHigh");
+const vitalBpLowInput = document.getElementById("vitalBpLow");
+const vitalPulseInput = document.getElementById("vitalPulse");
+const vitalSpo2Input = document.getElementById("vitalSpo2");
+const vitalTempInput = document.getElementById("vitalTemp");
 
-  const resultSection = document.getElementById("resultSection");
-  const reportOutput = document.getElementById("reportOutput");
-  const copyBtn = document.getElementById("copyBtn");
+const currentStateInput = document.getElementById("currentState");
 
-  // フォーム送信時に報告文を生成
-  form.addEventListener("submit", (e) => {
-    e.preventDefault();
+const requestActionInput = document.getElementById("requestAction");
+const outputArea = document.getElementById("output");
+const generateBtn = document.getElementById("generate");
 
-    const role = roleInput.value || "職員";
-    const title = titleInput.value.trim();
-    const whenWhere = whenWhereInput.value.trim();
-    const whatHappened = whatHappenedInput.value.trim();
-    const yourAction = yourActionInput.value.trim();
-    const currentStatus = currentStatusInput.value.trim();
-    const requestToOther = requestToOtherInput.value.trim();
+generateBtn.addEventListener("click", () => {
+  let lines = [];
 
-    if (!title || !whenWhere || !whatHappened || !yourAction || !currentStatus || !requestToOther) {
-      alert("必須項目を入力してください。");
-      return;
+  // 何が起きた？
+  if (eventDetailInput.value.trim()) {
+    lines.push("■ 何が起きた？");
+    lines.push(eventDetailInput.value.trim());
+    lines.push("");
+  }
+
+  // いつ？
+  if (eventTimeInput.value.trim()) {
+    lines.push("■ いつ？");
+    lines.push(eventTimeInput.value.trim());
+    lines.push("");
+  }
+
+  // どこで？
+  if (eventPlaceInput.value.trim()) {
+    lines.push("■ どこで？");
+    lines.push(eventPlaceInput.value.trim());
+    lines.push("");
+  }
+
+  // 誰が？
+  if (eventPersonInput.value.trim()) {
+    lines.push("■ 誰が？");
+    lines.push(eventPersonInput.value.trim());
+    lines.push("");
+  }
+
+  // 今の状態 / バイタル
+  let stateLines = [];
+
+  // バイタル
+  if (
+    vitalBpHighInput.value ||
+    vitalBpLowInput.value ||
+    vitalPulseInput.value ||
+    vitalSpo2Input.value ||
+    vitalTempInput.value
+  ) {
+    let v = "【バイタル】";
+
+    if (vitalBpHighInput.value && vitalBpLowInput.value) {
+      v += ` 血圧 ${vitalBpHighInput.value}/${vitalBpLowInput.value} mmHg`;
+    }
+    if (vitalPulseInput.value) {
+      v += `｜脈拍 ${vitalPulseInput.value} 回/分`;
+    }
+    if (vitalSpo2Input.value) {
+      v += `｜SpO₂ ${vitalSpo2Input.value}%`;
+    }
+    if (vitalTempInput.value) {
+      v += `｜体温 ${vitalTempInput.value}℃`;
     }
 
-    // 報告文のひな型
-    const reportText = [
-      `【件名】`,
-      `${title}`,
-      ``,
-      `【報告者】`,
-      `${role}`,
-      ``,
-      `【経緯】`,
-      `${whenWhere}`,
-      `${whatHappened}`,
-      ``,
-      `【対応】`,
-      `${yourAction}`,
-      ``,
-      `【現在の状態】`,
-      `${currentStatus}`,
-      ``,
-      `【相談・依頼】`,
-      `${requestToOther}`,
-    ].join("\n");
+    stateLines.push(v);
+  }
 
-    // 表示
-    reportOutput.value = reportText;
-    resultSection.classList.remove("hidden");
+  // 今の様子コメント
+  if (currentStateInput.value.trim()) {
+    stateLines.push(currentStateInput.value.trim());
+  }
 
-    // 上まで自動スクロール（スマホ用）
-    resultSection.scrollIntoView({ behavior: "smooth", block: "start" });
-  });
+  if (stateLines.length > 0) {
+    lines.push("■ 今の状態・変化");
+    lines.push(stateLines.join("\n"));
+    lines.push("");
+  }
 
-  // コピー機能
-  copyBtn.addEventListener("click", async () => {
-    if (!reportOutput.value) return;
+  // 相手にしてほしいこと
+  if (requestActionInput.value.trim()) {
+    lines.push("■ 相手にしてほしいこと");
+    lines.push(requestActionInput.value.trim());
+  }
 
-    try {
-      await navigator.clipboard.writeText(reportOutput.value);
-      copyBtn.textContent = "コピーしました ✓";
-      setTimeout(() => {
-        copyBtn.textContent = "報告文をコピー";
-      }, 1500);
-    } catch (err) {
-      alert("コピーに失敗しました。手動で選択してコピーしてください。");
-    }
-  });
+  // 出力
+  outputArea.textContent = lines.join("\n");
 });

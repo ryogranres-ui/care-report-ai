@@ -2,154 +2,169 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8" />
-  <title>Care Report AI（試作版）</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <link rel="stylesheet" href="app.css" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Care Report AI（介護・報告自動生成ツール）</title>
+
+  <style>
+    body {
+      font-family: sans-serif;
+      background: #f7f7f7;
+      padding: 24px;
+      line-height: 1.6;
+    }
+
+    h1 {
+      text-align: center;
+      margin-bottom: 24px;
+    }
+
+    .form__group {
+      margin-bottom: 24px;
+    }
+
+    .form__label {
+      font-weight: bold;
+      display: block;
+      margin-bottom: 8px;
+    }
+
+    .form__input,
+    .form__textarea,
+    select {
+      width: 100%;
+      padding: 10px;
+      font-size: 1rem;
+      margin-top: 4px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      box-sizing: border-box;
+    }
+
+    .form__textarea {
+      height: 120px;
+      resize: vertical;
+    }
+
+    .vital-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+      margin-bottom: 8px;
+    }
+
+    .vital-item label {
+      font-size: 0.8rem;
+      display: block;
+      margin-bottom: 4px;
+    }
+
+    .btn {
+      width: 100%;
+      padding: 14px 20px;
+      font-size: 1.1rem;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      margin-top: 12px;
+    }
+
+    .btn--primary {
+      background: #0078ff;
+      color: white;
+    }
+
+    .output {
+      margin-top: 32px;
+      padding: 20px;
+      background: white;
+      border-radius: 6px;
+      border: 1px solid #ddd;
+      white-space: pre-wrap;
+    }
+  </style>
 </head>
+
 <body>
-  <header class="header">
-    <h1>Care Report AI（試作版）</h1>
-    <p class="header__subtitle">
-      質問に答えるだけで、伝わる報告文を自動で組み立てる練習ツールです。
-    </p>
-    <p class="header__note">
-      ※まだ AI 搭載前の試作品です。現場での正式な報告書作成には使わないでください。
-    </p>
-  </header>
+  <h1>Care Report AI（介護・報告自動生成ツール）</h1>
 
-  <main class="container">
-    <!-- 1. 入力フォーム -->
-    <section class="card">
-      <h2 class="card__title">1. 報告内容を入力</h2>
+  <!-- 何が起きた？ -->
+  <div class="form__group">
+    <label class="form__label">何が起きた？（事象）</label>
+    <textarea id="eventDetail" class="form__textarea" placeholder="例：歩行時に左足を痛がる様子があり…"></textarea>
+  </div>
 
-      <form id="reportForm" class="form">
-        <!-- 立場 -->
-        <div class="form__group">
-          <label for="role" class="form__label">あなたの立場</label>
-          <select id="role" class="form__select">
-            <option value="">選択してください</option>
-            <option value="新人職員">新人</option>
-            <option value="中堅職員">中堅</option>
-            <option value="管理者・リーダー">管理者・リーダー</option>
-          </select>
-        </div>
+  <!-- いつ？ -->
+  <div class="form__group">
+    <label class="form__label">いつ？（時間・タイミング）</label>
+    <input type="text" id="eventTime" class="form__input" placeholder="例：本日14時頃" />
+  </div>
 
-        <!-- 件名 -->
-        <div class="form__group">
-          <label for="title" class="form__label">
-            短い件名（どんな報告？） <span class="form__required">必須</span>
-          </label>
-          <input
-            id="title"
-            type="text"
-            class="form__input"
-            placeholder="例：A様の転倒について"
-            required
-          />
-        </div>
+  <!-- どこで？ -->
+  <div class="form__group">
+    <label class="form__label">どこで？（場所）</label>
+    <input type="text" id="eventPlace" class="form__input" placeholder="例：施設内の廊下" />
+  </div>
 
-        <!-- いつ・どこで -->
-        <div class="form__group">
-          <label for="whenWhere" class="form__label">
-            いつ・どこで？ <span class="form__required">必須</span>
-          </label>
-          <textarea
-            id="whenWhere"
-            class="form__textarea"
-            rows="2"
-            placeholder="例：本日11時ごろ、2階食堂にて。"
-            required
-          ></textarea>
-        </div>
+  <!-- 誰が？ -->
+  <div class="form__group">
+    <label class="form__label">誰が？（対象者）</label>
+    <input type="text" id="eventPerson" class="form__input" placeholder="例：Aさん" />
+  </div>
 
-        <!-- どの利用者様に、何が起きた？ -->
-        <div class="form__group">
-          <label for="whatHappened" class="form__label">
-            どの利用者様に、何が起きた？ <span class="form__required">必須</span>
-          </label>
-          <textarea
-            id="whatHappened"
-            class="form__textarea"
-            rows="3"
-            placeholder="例：A様が立ち上がろうとした際、バランスを崩して床に尻もちをつかれました。"
-            required
-          ></textarea>
-        </div>
+  <!-- 今の状態・変化 / バイタル -->
+  <div class="form__group">
+    <label class="form__label">今の状態・変化 / バイタル</label>
 
-        <!-- その時どう対応した？ -->
-        <div class="form__group">
-          <label for="yourAction" class="form__label">
-            その時あなたはどう対応した？ <span class="form__required">必須</span>
-          </label>
-          <textarea
-            id="yourAction"
-            class="form__textarea"
-            rows="3"
-            placeholder="例：直ちに駆け寄り、痛みの有無を確認しつつ体位を整え、バイタル測定とアイシングを行いました。"
-            required
-          ></textarea>
-        </div>
-
-        <!-- 今の状態・変化 -->
-        <div class="form__group">
-          <label for="currentStatus" class="form__label">
-            今の状態・変化 <span class="form__required">必須</span>
-          </label>
-          <textarea
-            id="currentStatus"
-            class="form__textarea"
-            rows="3"
-            placeholder="例：現在も歩行時に軽い痛みを訴えていますが、会話は普段通りです。"
-            required
-          ></textarea>
-        </div>
-
-        <!-- 相手にどうしてほしい？ -->
-        <div class="form__group">
-          <label for="requestToOther" class="form__label">
-            相手にどうしてほしい？（相談・報告のゴール） <span class="form__required">必須</span>
-          </label>
-          <textarea
-            id="requestToOther"
-            class="form__textarea"
-            rows="3"
-            placeholder="例：今後の観察ポイントと、ご家族への説明内容について指示いただきたいです。"
-            required
-          ></textarea>
-        </div>
-
-        <!-- ボタン -->
-        <div class="form__actions">
-          <button type="submit" id="generateBtn" class="btn btn--primary">
-            報告文をつくる
-          </button>
-        </div>
-      </form>
-    </section>
-
-    <!-- 2. 生成された報告文 -->
-    <section id="resultSection" class="card result hidden">
-      <h2 class="card__title">2. 生成された報告文</h2>
-
-      <p class="result__note">
-        以下の文面を、必要に応じて加筆・修正してお使いください。
-      </p>
-
-      <textarea
-        id="reportOutput"
-        class="result__textarea"
-        rows="12"
-        readonly
-      ></textarea>
-
-      <div class="form__actions">
-        <button type="button" id="copyBtn" class="btn">
-          報告文をコピー
-        </button>
+    <div class="vital-grid">
+      <div class="vital-item">
+        <label>血圧 上</label>
+        <input type="number" id="vitalBpHigh" class="form__input" placeholder="120" />
       </div>
-    </section>
-  </main>
 
-  <script src="app.js" defer></script>
+      <div class="vital-item">
+        <label>血圧 下</label>
+        <input type="number" id="vitalBpLow" class="form__input" placeholder="70" />
+      </div>
+
+      <div class="vital-item">
+        <label>脈拍</label>
+        <input type="number" id="vitalPulse" class="form__input" placeholder="72" />
+      </div>
+
+      <div class="vital-item">
+        <label>SpO₂</label>
+        <input type="number" id="vitalSpo2" class="form__input" placeholder="97" />
+      </div>
+
+      <div class="vital-item">
+        <label>体温</label>
+        <input type="number" id="vitalTemp" class="form__input" placeholder="36.5" step="0.1" />
+      </div>
+    </div>
+
+    <textarea id="currentState" class="form__textarea" placeholder="例：普段通り会話可能だが歩行時に痛みあり…"></textarea>
+  </div>
+
+  <!-- 相手にしてほしいこと（選択） -->
+  <div class="form__group">
+    <label class="form__label">相手にしてほしいこと</label>
+    <select id="requestAction">
+      <option value="">（選択してください）</option>
+      <option value="確認をお願いします">確認をお願いします</option>
+      <option value="対応をお願いします">対応をお願いします</option>
+      <option value="判断をお願いします">判断をお願いします</option>
+      <option value="共有のみです">共有のみです</option>
+    </select>
+  </div>
+
+  <!-- 文章生成ボタン -->
+  <button id="generate" class="btn btn--primary">報告文をつくる</button>
+
+  <!-- 出力 -->
+  <div id="output" class="output"></div>
+
+  <!-- Script -->
+  <script src="app.js"></script>
 </body>
+
 </html>
