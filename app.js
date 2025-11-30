@@ -1,97 +1,112 @@
-const eventDetailInput = document.getElementById("eventDetail");
-const eventTimeInput = document.getElementById("eventTime");
-const eventPlaceInput = document.getElementById("eventPlace");
-const eventPersonInput = document.getElementById("eventPerson");
+// Care Report AI - フロント側ロジック（試作版）
 
-const vitalBpHighInput = document.getElementById("vitalBpHigh");
-const vitalBpLowInput = document.getElementById("vitalBpLow");
-const vitalPulseInput = document.getElementById("vitalPulse");
-const vitalSpo2Input = document.getElementById("vitalSpo2");
-const vitalTempInput = document.getElementById("vitalTemp");
+document.addEventListener("DOMContentLoaded", () => {
+  const form = document.getElementById("reportForm");
+  const resultText = document.getElementById("resultText");
+  const feedback = document.getElementById("feedback");
 
-const currentStateInput = document.getElementById("currentState");
+  form.addEventListener("submit", (e) => {
+    e.preventDefault();
 
-const requestActionInput = document.getElementById("requestAction");
-const outputArea = document.getElementById("output");
-const generateBtn = document.getElementById("generate");
+    // 入力値を取得
+    const stance = getValue("stance");
+    const what = getValue("what");
+    const when = getValue("when");
+    const where = getValue("where");
+    const who = getValue("who");
+    const condition = getValue("condition");
+    const action = getValue("action");
+    const requestType = getValue("requestType");
+    const requestDetail = getValue("requestDetail");
 
-generateBtn.addEventListener("click", () => {
-  let lines = [];
+    const bpSys = getValue("bpSys");
+    const bpDia = getValue("bpDia");
+    const pulse = getValue("pulse");
+    const spo2 = getValue("spo2");
+    const temp = getValue("temp");
 
-  // 何が起きた？
-  if (eventDetailInput.value.trim()) {
-    lines.push("■ 何が起きた？");
-    lines.push(eventDetailInput.value.trim());
-    lines.push("");
-  }
+    // 必須チェック
+    const missing = [];
+    if (!what) missing.push("何が起きたか");
+    if (!when) missing.push("いつ");
+    if (!where) missing.push("どこで");
+    if (!who) missing.push("誰が");
+    if (!action) missing.push("どう対応したか");
+    if (!requestDetail) missing.push("相手にしてほしいこと");
 
-  // いつ？
-  if (eventTimeInput.value.trim()) {
-    lines.push("■ いつ？");
-    lines.push(eventTimeInput.value.trim());
-    lines.push("");
-  }
-
-  // どこで？
-  if (eventPlaceInput.value.trim()) {
-    lines.push("■ どこで？");
-    lines.push(eventPlaceInput.value.trim());
-    lines.push("");
-  }
-
-  // 誰が？
-  if (eventPersonInput.value.trim()) {
-    lines.push("■ 誰が？");
-    lines.push(eventPersonInput.value.trim());
-    lines.push("");
-  }
-
-  // 今の状態 / バイタル
-  let stateLines = [];
-
-  // バイタル
-  if (
-    vitalBpHighInput.value ||
-    vitalBpLowInput.value ||
-    vitalPulseInput.value ||
-    vitalSpo2Input.value ||
-    vitalTempInput.value
-  ) {
-    let v = "【バイタル】";
-
-    if (vitalBpHighInput.value && vitalBpLowInput.value) {
-      v += ` 血圧 ${vitalBpHighInput.value}/${vitalBpLowInput.value} mmHg`;
-    }
-    if (vitalPulseInput.value) {
-      v += `｜脈拍 ${vitalPulseInput.value} 回/分`;
-    }
-    if (vitalSpo2Input.value) {
-      v += `｜SpO₂ ${vitalSpo2Input.value}%`;
-    }
-    if (vitalTempInput.value) {
-      v += `｜体温 ${vitalTempInput.value}℃`;
+    if (missing.length > 0) {
+      feedback.innerHTML =
+        "⚠️ 次の項目が未入力です：" + missing.join(" / ");
+      feedback.className = "feedback feedback__warn";
+      // それでも文章は作る（学習用）
+    } else {
+      feedback.innerHTML =
+        "✅ 主要な項目は埋まっています。内容を読み直してから送信してください。";
+      feedback.className = "feedback feedback__ok";
     }
 
-    stateLines.push(v);
-  }
+    // バイタル文の組み立て
+    const vitalParts = [];
+    if (bpSys || bpDia) {
+      vitalParts.push(
+        `血圧 ${bpSys || "?"}/${bpDia || "?"} mmHg`
+      );
+    }
+    if (pulse) vitalParts.push(`脈拍 ${pulse} 回/分`);
+    if (spo2) vitalParts.push(`SpO₂ ${spo2} %`);
+    if (temp) vitalParts.push(`体温 ${temp} ℃`);
 
-  // 今の様子コメント
-  if (currentStateInput.value.trim()) {
-    stateLines.push(currentStateInput.value.trim());
-  }
+    let vitalSentence = "";
+    if (vitalParts.length > 0) {
+      vitalSentence = "バイタルは、" + vitalParts.join("、") + " です。";
+    }
 
-  if (stateLines.length > 0) {
-    lines.push("■ 今の状態・変化");
-    lines.push(stateLines.join("\n"));
-    lines.push("");
-  }
+    // 相手にしてほしいことの一文
+    let requestSentence = "";
+    if (requestType || requestDetail) {
+      const head = requestType
+        ? `【${requestType}】`
+        : "【相談したいこと】";
+      requestSentence = head + requestDetail.replace(/^\s+/, "");
+    }
 
-  // 相手にしてほしいこと
-  if (requestActionInput.value.trim()) {
-    lines.push("■ 相手にしてほしいこと");
-    lines.push(requestActionInput.value.trim());
-  }
+    // 最終報告文の組み立て
+    const lines = [];
 
-  // 出力
-  outputArea.textContent = lines.join("\n");
+    lines.push(`●報告者：${stance}`);
+    if (when || where) {
+      lines.push(
+        `●発生日時・場所：${[when, where].filter(Boolean).join("　／　")}`
+      );
+    }
+    if (who) lines.push(`●対象者：${who}`);
+    if (what) lines.push(`●何が起きたか：${what}`);
+    if (condition || vitalSentence) {
+      const base = condition ? condition : "";
+      const space = base && vitalSentence ? " " : "";
+      lines.push(`●現在の状態：${base}${space}${vitalSentence}`);
+    } else if (vitalSentence) {
+      lines.push(`●現在の状態：${vitalSentence}`);
+    }
+    if (action) lines.push(`●あなたの対応：${action}`);
+    if (requestSentence) lines.push(`●相手にお願いしたいこと：${requestSentence}`);
+
+    // 文章が空の場合のフォールバック
+    if (lines.length === 0) {
+      lines.push(
+        "（まだ入力がほとんどありません。フォームに内容を入力すると、自動で報告文が作成されます。）"
+      );
+    }
+
+    resultText.value = lines.join("\n");
+    // 下の方まで自動スクロールすると気持ちいい
+    resultText.scrollIntoView({ behavior: "smooth", block: "start" });
+  });
 });
+
+// 共通：値取得ヘルパー
+function getValue(id) {
+  const el = document.getElementById(id);
+  if (!el) return "";
+  return el.value.trim();
+}
