@@ -123,7 +123,20 @@ document.addEventListener("DOMContentLoaded", () => {
         return;
       }
 
-      const data = await res.json();
+            const data = await res.json();
+
+      // サーバー側でエラーを検知した場合
+      if (data && data.error) {
+        console.error("AI API returned error", data);
+        if (scoreCommentEl) {
+          scoreCommentEl.textContent =
+            feedback.comment +
+            `\n\n※ AI 連携でエラーが発生しました（${data.error}${
+              data.status ? `: ${data.status}` : ""
+            }）。`;
+        }
+        return;
+      }
 
       if (typeof data.score === "number" && scoreNumberEl) {
         scoreNumberEl.textContent = String(data.score);
@@ -133,6 +146,10 @@ document.addEventListener("DOMContentLoaded", () => {
       }
       if (data.comment && scoreCommentEl) {
         scoreCommentEl.textContent = data.comment;
+      }
+
+      if (data.rewriteExample) {
+        console.log("AI 書き直し案:\n", data.rewriteExample);
       }
 
       // 書き直し案はまずコンソールに出す。UIに載せたくなったらあとでボックス作ろう

@@ -2,7 +2,7 @@
 // Vercel のサーバーレス関数（OpenAI で報告のAIフィードバックを返す）
 
 export default async function handler(req, res) {
-  // CORS 設定（GitHub Pages など別ドメインから呼べるように）
+  // CORS 設定（別ドメインから呼ぶ場合に備えて）
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "POST,OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
@@ -16,16 +16,31 @@ export default async function handler(req, res) {
   }
 
   try {
-    // 生のリクエストボディを読み取る
-    const chunks = [];
-    for await (const chunk of req) {
-      chunks.push(chunk);
-    }
-    const bodyString = Buffer.concat(chunks).toString("utf8") || "{}";
-    const body = JSON.parse(bodyString);
+    // --- リクエストボディを安全に取り出す（body / 生ストリーム両対応） ---
+    let reportText = "";
+    let fields = {};
 
-    const reportText = body.reportText || "";
-    const fields = body.fields || {};
+    if (req.body && Object.keys(req.body).length > 0) {
+      // Vercel が JSON をパースしてくれているパターン
+      reportText = req.body.reportText || "";
+      fields = req.body.fields || {};
+    } else {
+      // 念のため、生のストリームから読むパターンも用意
+      let raw = "";
+      await new Promise((resolve, reject) => {
+        req.on("data", (chunk) => {
+          raw += chunk;
+        });
+        req.on("end", resolve);
+        req.on("error", reject);
+      });
+
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        reportText = parsed.reportText || "";
+        fields = parsed.fields || {};
+      }
+    }
 
     if (!reportText) {
       return res.status(400).json({ error: "reportText is required" });
@@ -34,7 +49,9 @@ export default async function handler(req, res) {
     const openaiApiKey = process.env.OPENAI_API_KEY;
     if (!openaiApiKey) {
       console.error("OPENAI_API_KEY is not set");
-      return res.status(500).json({ error: "Server configuration error" });
+      return res
+        .status(500)
+        .json({ error: "OPENAI_API_KEY is not set on server" });
     }
 
     // 介護報告用のプロンプト
@@ -68,7 +85,7 @@ ${JSON.stringify(fields, null, 2)}
         Authorization: `Bearer ${openaiApiKey}`,
       },
       body: JSON.stringify({
-        model: "gpt-4o-mini", // 軽量で安いモデル。必要なら gpt-4o に変更可
+        model: "gpt-4o-mini", // 軽量で安いモデル
         temperature: 0.4,
         messages: [
           {
@@ -81,10 +98,16 @@ ${JSON.stringify(fields, null, 2)}
       }),
     });
 
+    // OpenAI 側でエラーの場合 → エラー内容をそのまま返す（デバッグ用）
     if (!apiRes.ok) {
       const errText = await apiRes.text();
       console.error("OpenAI API error:", apiRes.status, errText);
-      return res.status(500).json({ error: "OpenAI API error" });
+
+      return res.status(200).json({
+        error: "OpenAI API error",
+        status: apiRes.status,
+        detail: errText.slice(0, 500), // 長すぎる時は先頭だけ
+      });
     }
 
     const completion = await apiRes.json();
@@ -94,7 +117,6 @@ ${JSON.stringify(fields, null, 2)}
     try {
       data = JSON.parse(content);
     } catch (e) {
-      // JSON で返ってこなかった場合は、最低限の形にする
       console.error("Failed to parse AI JSON:", e, content);
       data = {
         score: 0,
@@ -108,6 +130,9 @@ ${JSON.stringify(fields, null, 2)}
     return res.status(200).json(data);
   } catch (err) {
     console.error("Server error:", err);
-    return res.status(500).json({ error: "Server error" });
+    return res.status(200).json({
+      error: "Server error",
+      detail: String(err),
+    });
   }
 }
