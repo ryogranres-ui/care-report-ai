@@ -1,4 +1,3 @@
-/* 全体レイアウト */
 *,
 *::before,
 *::after {
@@ -7,236 +6,226 @@
 
 body {
   margin: 0;
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  background: #f3f4f6;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    sans-serif;
+  background: #f5f7fb;
   color: #111827;
 }
 
-.app {
+.page {
   max-width: 960px;
   margin: 0 auto;
-  padding: 24px 16px 40px;
+  padding: 24px 16px 48px;
 }
 
-/* ヘッダー */
-.header h1 {
-  margin: 0 0 4px;
+.page-header h1 {
+  margin: 0 0 8px;
   font-size: 1.6rem;
 }
 
-.header__note {
+.page-lead {
   margin: 0 0 24px;
   font-size: 0.9rem;
   color: #4b5563;
 }
 
-/* カード */
 .card {
   background: #ffffff;
   border-radius: 16px;
   padding: 20px 20px 24px;
-  box-shadow: 0 10px 25px rgba(15, 23, 42, 0.08);
   margin-bottom: 20px;
+  box-shadow: 0 10px 25px rgba(15, 23, 42, 0.08);
 }
 
-.card__title {
+.card h2 {
   margin: 0 0 8px;
   font-size: 1.1rem;
 }
 
-.card__subtitle {
-  margin: 0 0 12px;
+.section-note {
+  margin: 0 0 16px;
   font-size: 0.85rem;
   color: #6b7280;
 }
 
-/* フォーム要素 */
+/* フォーム系 */
+
 .form {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
+  margin-top: 8px;
 }
 
-.field {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
+.field-group {
+  margin-bottom: 16px;
 }
 
-.field--group {
-  border: 1px solid #e5e7eb;
-  border-radius: 12px;
-  padding: 10px 12px 12px;
+.field-group--confirm {
+  margin-top: 8px;
 }
 
-.field__label {
+.field-label {
+  display: block;
+  margin-bottom: 4px;
   font-size: 0.9rem;
   font-weight: 600;
 }
 
-.required {
-  color: #ef4444;
-  font-size: 0.8rem;
-  margin-left: 4px;
-}
-
-.optional {
-  color: #6b7280;
-  font-size: 0.8rem;
-  margin-left: 4px;
-}
-
-.field__input,
-.field__textarea,
-select {
-  width: 100%;
-  padding: 8px 10px;
-  font-size: 0.9rem;
-  border-radius: 8px;
-  border: 1px solid #d1d5db;
-  outline: none;
-}
-
-.field__input:focus,
-.field__textarea:focus,
-select:focus {
-  border-color: #2563eb;
-  box-shadow: 0 0 0 1px rgba(37, 99, 235, 0.2);
-}
-
-.field__textarea {
-  resize: vertical;
-  min-height: 70px;
-}
-
-.field__textarea--mt {
-  margin-top: 8px;
-}
-
-/* バイタル用グリッド */
-.vital-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px 12px;
-  margin-top: 4px;
-}
-
-.vital-field {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.vital-field--wide {
-  grid-column: 1 / -1;
-}
-
-.vital-label {
-  font-size: 0.8rem;
-  color: #4b5563;
-}
-
-/* ボタン */
-.btn-primary {
-  margin-top: 8px;
-  width: 100%;
-  padding: 10px 14px;
-  border-radius: 999px;
-  border: none;
-  background: #2563eb;
-  color: #ffffff;
-  font-size: 1rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.15s ease, transform 0.05s ease, box-shadow 0.05s ease;
-  box-shadow: 0 8px 18px rgba(37, 99, 235, 0.35);
-}
-
-.btn-primary:hover {
-  background: #1d4ed8;
-  transform: translateY(-1px);
-}
-
-.btn-primary:active {
-  background: #1e40af;
-  transform: translateY(0);
-  box-shadow: 0 4px 10px rgba(30, 64, 175, 0.35);
-}
-
-/* メモ */
-.form__note {
+.field-note {
   margin: 4px 0 0;
   font-size: 0.8rem;
   color: #6b7280;
 }
 
-/* 出力テキスト */
-.output {
+.field-input {
   width: 100%;
-  min-height: 220px;
   padding: 10px 12px;
   font-size: 0.9rem;
-  border-radius: 12px;
+  border-radius: 10px;
   border: 1px solid #d1d5db;
-  resize: vertical;
-  white-space: pre-wrap;
-}
-
-/* スコアボックス */
-.score-box {
-  border-radius: 14px;
-  border: 1px solid #e5e7eb;
-  padding: 12px 14px;
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease,
+    background-color 0.15s ease;
   background: #f9fafb;
 }
 
-.score-box__main {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  margin-bottom: 6px;
+.field-input:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 1px rgba(37, 99, 235, 0.25);
+  background: #ffffff;
 }
 
-.score-box__label {
-  font-size: 0.9rem;
+.field-textarea {
+  min-height: 80px;
+  resize: vertical;
+}
+
+/* バッジ */
+
+.badge-required {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: #fee2e2;
+  color: #b91c1c;
+  font-size: 0.7rem;
+  vertical-align: middle;
+}
+
+/* バイタル */
+
+.vital-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.vital-item .field-input {
+  padding-right: 6px;
+}
+
+.vital-label {
+  display: block;
+  font-size: 0.8rem;
+  color: #6b7280;
+  margin-bottom: 2px;
+}
+
+/* チェックボックス */
+
+.checkbox {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 0.85rem;
   color: #4b5563;
 }
 
-.score-box__value {
+.checkbox input[type="checkbox"] {
+  margin-top: 3px;
+}
+
+/* ボタン */
+
+.field-actions {
+  margin-top: 16px;
+  text-align: center;
+}
+
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 220px;
+  padding: 12px 24px;
+  border-radius: 999px;
+  border: none;
+  cursor: pointer;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #ffffff;
+  background: linear-gradient(90deg, #2563eb, #1d4ed8);
+  box-shadow: 0 12px 20px rgba(37, 99, 235, 0.35);
+  transition: transform 0.08s ease, box-shadow 0.08s ease,
+    opacity 0.1s ease;
+}
+
+.btn-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 16px 26px rgba(37, 99, 235, 0.4);
+}
+
+.btn-primary:active {
+  transform: translateY(1px);
+  box-shadow: 0 8px 12px rgba(37, 99, 235, 0.25);
+  opacity: 0.95;
+}
+
+/* 出力エリア */
+
+.output-area {
+  min-height: 140px;
+  font-family: "Yu Gothic", "Meiryo", system-ui, -apple-system,
+    BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+/* スコア表示 */
+
+.score-main {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-top: 4px;
+  margin-bottom: 8px;
+}
+
+.score-label {
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.score-number {
   font-size: 1.6rem;
   font-weight: 700;
   color: #2563eb;
 }
 
-.score-list {
-  margin: 8px 0 0;
-  padding-left: 18px;
+.score-slash {
+  font-size: 0.9rem;
+  color: #6b7280;
+}
+
+.score-level {
+  font-size: 0.9rem;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.score-comment {
   font-size: 0.85rem;
-}
-
-.score-list__item {
-  margin-bottom: 2px;
-}
-
-.score-list__item--ok {
-  color: #047857; /* green */
-}
-
-.score-list__item--ng {
-  color: #b45309; /* amber */
-}
-
-/* レスポンシブ */
-@media (max-width: 640px) {
-  .app {
-    padding: 16px 10px 28px;
-  }
-
-  .card {
-    padding: 16px 14px 20px;
-  }
-
-  .vital-grid {
-    grid-template-columns: 1fr;
-  }
+  color: #374151;
+  background: #eff6ff;
+  border-radius: 10px;
+  padding: 10px 12px;
+  white-space: pre-line; /* \n を改行として表示 */
 }
