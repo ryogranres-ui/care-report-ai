@@ -1,12 +1,14 @@
 document.addEventListener("DOMContentLoaded", () => {
   const form = document.getElementById("report-form");
   const output = document.getElementById("outputText");
+  const scoreValue = document.getElementById("scoreValue");
+  const scoreDetails = document.getElementById("scoreDetails");
 
   form.addEventListener("submit", (event) => {
     event.preventDefault();
 
     const reporterName = document.getElementById("reporterName").value.trim();
-    const role = document.getElementById("role").value.trim(); // ← 今は使わない（将来用）
+    const role = document.getElementById("role").value.trim(); // 今は使わない（将来用）
 
     const whatHappened = document.getElementById("whatHappened").value.trim();
     const when = document.getElementById("when").value.trim();
@@ -87,5 +89,92 @@ document.addEventListener("DOMContentLoaded", () => {
     // テキストエリアに出力
     output.value = lines.join("\n");
     output.scrollTop = 0;
+
+    // スコア計算用フラグ
+    const flags = {
+      whatHappened: !!whatHappened,
+      when: !!when,
+      where: !!where,
+      who: !!who,
+      status: !!currentStatus || !!(bpSys || bpDia || pulse || spo2 || temp),
+      action: !!yourAction,
+      goal: !!goalType || !!goalDetail,
+    };
+
+    updateScore(flags, scoreValue, scoreDetails);
   });
 });
+
+/**
+ * 報告スコアを計算して画面に反映
+ */
+function updateScore(flags, scoreValueEl, scoreDetailsEl) {
+  if (!scoreValueEl || !scoreDetailsEl) return;
+
+  const items = [
+    {
+      key: "whatHappened",
+      label: "何が起きたか（事象）",
+      weight: 25,
+      hint: "「どんなことが起きたか」を一文で書いてみましょう。",
+    },
+    {
+      key: "when",
+      label: "いつ？（時間・タイミング）",
+      weight: 10,
+      hint: "「本日◯時頃」「今朝の排泄介助時」など、タイミングを入れると◎です。",
+    },
+    {
+      key: "where",
+      label: "どこで？（場所）",
+      weight: 10,
+      hint: "「居室」「トイレ」「食堂」など、現場がイメージできる言葉を入れてみましょう。",
+    },
+    {
+      key: "who",
+      label: "誰が？（対象者）",
+      weight: 10,
+      hint: "対象となる利用者様のお名前を書いておきましょう。",
+    },
+    {
+      key: "status",
+      label: "現在の状態・変化 / バイタル",
+      weight: 15,
+      hint: "様子の変化やバイタルの数字があると、重症度の判断がしやすくなります。",
+    },
+    {
+      key: "action",
+      label: "あなたの対応",
+      weight: 20,
+      hint: "自分が行った対応を簡潔に書きましょう。（例：安静保持・アイシングなど）",
+    },
+    {
+      key: "goal",
+      label: "相手にしてほしいこと（ゴール）",
+      weight: 10,
+      hint: "「判断がほしい」「医師へ報告してほしい」など、相手へのお願いをはっきりさせましょう。",
+    },
+  ];
+
+  let total = 0;
+  scoreDetailsEl.innerHTML = "";
+
+  items.forEach((item) => {
+    const ok = !!flags[item.key];
+    if (ok) total += item.weight;
+
+    const li = document.createElement("li");
+    li.className =
+      "score-list__item " +
+      (ok ? "score-list__item--ok" : "score-list__item--ng");
+
+    li.textContent =
+      (ok ? "✔ " : "△ ") +
+      `${item.label}（${item.weight}点）` +
+      (ok ? "" : `：${item.hint}`);
+
+    scoreDetailsEl.appendChild(li);
+  });
+
+  scoreValueEl.textContent = `${total} / 100`;
+}

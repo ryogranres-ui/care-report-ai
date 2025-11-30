@@ -182,6 +182,50 @@ select:focus {
   white-space: pre-wrap;
 }
 
+/* スコアボックス */
+.score-box {
+  border-radius: 14px;
+  border: 1px solid #e5e7eb;
+  padding: 12px 14px;
+  background: #f9fafb;
+}
+
+.score-box__main {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.score-box__label {
+  font-size: 0.9rem;
+  color: #4b5563;
+}
+
+.score-box__value {
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: #2563eb;
+}
+
+.score-list {
+  margin: 8px 0 0;
+  padding-left: 18px;
+  font-size: 0.85rem;
+}
+
+.score-list__item {
+  margin-bottom: 2px;
+}
+
+.score-list__item--ok {
+  color: #047857; /* green */
+}
+
+.score-list__item--ng {
+  color: #b45309; /* amber */
+}
+
 /* レスポンシブ */
 @media (max-width: 640px) {
   .app {

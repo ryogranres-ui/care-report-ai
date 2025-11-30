@@ -231,6 +231,23 @@
           readonly
         ></textarea>
       </section>
+
+      <!-- スコア＆フィードバック -->
+      <section class="card">
+        <h2 class="card__title">3. 報告スコアとフィードバック（ベータ版）</h2>
+        <p class="card__subtitle">
+          基本の7要素（事象・時間・場所・対象・状態・対応・ゴール）が揃っているかを簡易チェックします。
+          点数とコメントを見ながら、少しずつ「伝わる報告」に近づけていけます。
+        </p>
+
+        <div class="score-box">
+          <div class="score-box__main">
+            <span class="score-box__label">総合スコア</span>
+            <span id="scoreValue" class="score-box__value">-- / 100</span>
+          </div>
+          <ul id="scoreDetails" class="score-list"></ul>
+        </div>
+      </section>
     </main>
   </div>
 
