@@ -86,7 +86,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // ── ここから AI API を呼んで、結果で上書き ──
     try {
-      const apiUrl = "https://care-report-ai.vercel.app/api/evaluate-report";
+      const apiUrl = "/api/evaluate-report";
 
       const res = await fetch(apiUrl, {
         method: "POST",
