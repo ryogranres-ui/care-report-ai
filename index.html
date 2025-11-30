@@ -2,200 +2,233 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8" />
-  <title>Care Report AI（介護・報告自動生成ツール）</title>
+  <title>Care Report AI（試作版）</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="stylesheet" href="app.css" />
 </head>
 <body>
-  <div class="page">
+  <div class="app">
     <header class="header">
       <h1>Care Report AI（試作版）</h1>
-      <p class="header__subtitle">
-        質問に答えていくだけで、伝わる報告文を自動で組み立てる練習ツールです。
-      </p>
       <p class="header__note">
-        ※まだ AI 搭載前の“型作り”版です。現場での報告書作成の練習にも使えます。
+        質問に答えるだけで、伝わる報告文を自動で組み立てる練習ツールです。<br />
+        ※まだ AI 搭載前の型作り版です。現場での報告書作成にも使いやすい形を目指します。
       </p>
     </header>
 
     <main class="main">
-      <!-- 📝 入力フォーム -->
+      <!-- 入力エリア -->
       <section class="card">
         <h2 class="card__title">1. 報告内容を入力</h2>
 
-        <form id="reportForm" class="form">
-          <!-- 立場 -->
-          <div class="form__group">
-            <label for="stance" class="form__label">あなたの立場</label>
-            <select id="stance" class="form__control">
+        <form id="report-form" class="form">
+
+          <!-- 報告者情報 -->
+          <div class="field">
+            <label for="reporterName" class="field__label">
+              報告者の名前 <span class="required">必須</span>
+            </label>
+            <input
+              id="reporterName"
+              type="text"
+              class="field__input"
+              placeholder="例：田中"
+              required
+            />
+          </div>
+
+          <div class="field">
+            <label for="role" class="field__label">
+              あなたの立場 <span class="optional">任意（将来の学習に利用予定）</span>
+            </label>
+            <select id="role" class="field__input">
+              <option value="">選択しない</option>
               <option value="新人職員">新人職員</option>
-              <option value="介護職（常勤）">介護職（常勤）</option>
-              <option value="介護職（パート）">介護職（パート）</option>
-              <option value="リーダー・主任">リーダー・主任</option>
-              <option value="管理者・施設長">管理者・施設長</option>
+              <option value="介護職員（常勤）">介護職員（常勤）</option>
+              <option value="介護職員（非常勤）">介護職員（非常勤）</option>
+              <option value="リーダー・サブリーダー">リーダー・サブリーダー</option>
+              <option value="管理者・主任">管理者・主任</option>
               <option value="看護職">看護職</option>
               <option value="その他">その他</option>
             </select>
           </div>
 
           <!-- 何が起きた？ -->
-          <div class="form__group">
-            <label for="what" class="form__label">何が起きた？（事象）<span class="badge">必須</span></label>
+          <div class="field">
+            <label for="whatHappened" class="field__label">
+              何が起きた？（事象） <span class="required">必須</span>
+            </label>
             <textarea
-              id="what"
-              class="form__control form__control--textarea"
-              placeholder="例：歩行中に左足を痛がる様子があり、足を引きずっているように見えた。"
+              id="whatHappened"
+              class="field__textarea"
+              rows="3"
+              placeholder="例：腰痛の訴えがありました。"
+              required
             ></textarea>
           </div>
 
           <!-- いつ・どこで・誰が -->
-          <div class="form__group">
-            <label for="when" class="form__label">いつ？（時間・タイミング）<span class="badge">必須</span></label>
+          <div class="field">
+            <label for="when" class="field__label">いつ？（時間・タイミング）</label>
             <input
               id="when"
-              class="form__control"
               type="text"
-              placeholder="例：本日14時頃、夕食前の歩行訓練中。"
+              class="field__input"
+              placeholder="例：本日15時頃"
             />
           </div>
 
-          <div class="form__group">
-            <label for="where" class="form__label">どこで？（場所）<span class="badge">必須</span></label>
+          <div class="field">
+            <label for="where" class="field__label">どこで？（場所）</label>
             <input
               id="where"
-              class="form__control"
               type="text"
-              placeholder="例：2階フロア廊下、エレベーター前。"
+              class="field__input"
+              placeholder="例：居室"
             />
           </div>
 
-          <div class="form__group">
-            <label for="who" class="form__label">誰が？（対象者）<span class="badge">必須</span></label>
+          <div class="field">
+            <label for="who" class="field__label">誰が？（対象者）</label>
             <input
               id="who"
-              class="form__control"
               type="text"
-              placeholder="例：A様（要介護3、左変形性膝関節症あり）。"
+              class="field__input"
+              placeholder="例：伊藤様"
             />
           </div>
 
-          <!-- バイタル＋状態 -->
-          <div class="form__group">
-            <label class="form__label">今の状態・変化 / バイタル</label>
+          <!-- 今の状態・バイタル -->
+          <fieldset class="field field--group">
+            <legend class="field__label">
+              今の状態・変化 / バイタル
+            </legend>
 
             <div class="vital-grid">
-              <div class="vital-grid__item">
-                <label class="form__label--small">血圧 上</label>
+              <div class="vital-field">
+                <span class="vital-label">血圧 上</span>
                 <input
                   id="bpSys"
                   type="number"
                   inputmode="numeric"
-                  class="form__control"
+                  class="field__input"
                   placeholder="例：120"
                 />
               </div>
-              <div class="vital-grid__item">
-                <label class="form__label--small">血圧 下</label>
+
+              <div class="vital-field">
+                <span class="vital-label">血圧 下</span>
                 <input
                   id="bpDia"
                   type="number"
                   inputmode="numeric"
-                  class="form__control"
+                  class="field__input"
                   placeholder="例：70"
                 />
               </div>
-              <div class="vital-grid__item">
-                <label class="form__label--small">脈拍</label>
+
+              <div class="vital-field">
+                <span class="vital-label">脈拍</span>
                 <input
                   id="pulse"
                   type="number"
                   inputmode="numeric"
-                  class="form__control"
+                  class="field__input"
                   placeholder="例：72"
                 />
               </div>
-              <div class="vital-grid__item">
-                <label class="form__label--small">SpO₂</label>
+
+              <div class="vital-field">
+                <span class="vital-label">SpO₂</span>
                 <input
                   id="spo2"
                   type="number"
                   inputmode="numeric"
-                  class="form__control"
+                  class="field__input"
                   placeholder="例：97"
                 />
               </div>
-              <div class="vital-grid__item vital-grid__item--wide">
-                <label class="form__label--small">体温</label>
+
+              <div class="vital-field vital-field--wide">
+                <span class="vital-label">体温</span>
                 <input
                   id="temp"
                   type="number"
-                  inputmode="decimal"
                   step="0.1"
-                  class="form__control"
-                  placeholder="例：36.5"
+                  inputmode="decimal"
+                  class="field__input"
+                  placeholder="例：36.8"
                 />
               </div>
             </div>
 
             <textarea
-              id="condition"
-              class="form__control form__control--textarea"
-              placeholder="例：普段通り会話可能だが、歩行時に左膝の痛みを訴えている。表情は少ししかめ顔で、安静時は痛みなし。"
+              id="currentStatus"
+              class="field__textarea field__textarea--mt"
+              rows="2"
+              placeholder="例：様子は普段と変わらないが、薬がほしいと言っている。"
             ></textarea>
-          </div>
+          </fieldset>
 
-          <!-- その時どうした？ -->
-          <div class="form__group">
-            <label for="action" class="form__label">その時あなたはどう対応した？<span class="badge">必須</span></label>
+          <!-- 対応 -->
+          <div class="field">
+            <label for="yourAction" class="field__label">
+              その時あなたはどう対応した？ <span class="required">必須</span>
+            </label>
             <textarea
-              id="action"
-              class="form__control form__control--textarea"
-              placeholder="例：歩行を中止し、手すりにつかまってもらいながら椅子へ誘導。患部を確認し、アイシングを実施した。"
+              id="yourAction"
+              class="field__textarea"
+              rows="2"
+              placeholder="例：横になってもらい、安静にしてもらっている。"
+              required
             ></textarea>
           </div>
 
-          <!-- 相手にしてほしいこと -->
-          <div class="form__group">
-            <label for="request" class="form__label">相手にしてほしいこと（相談・報告のゴール）<span class="badge">必須</span></label>
-
-            <select id="requestType" class="form__control form__control--mb8">
-              <option value="" selected>（よくある目的から選ぶ）</option>
-              <option value="判断を仰ぎたい">対応の判断を仰ぎたい</option>
-              <option value="指示がほしい">今後の指示がほしい</option>
-              <option value="共有だけしておきたい">情報共有だけしておきたい</option>
-              <option value="受診が必要か相談したい">受診が必要か相談したい</option>
-              <option value="家族への説明方法を相談したい">家族への説明方法を相談したい</option>
+          <!-- ゴール -->
+          <div class="field">
+            <label for="goalType" class="field__label">
+              相手にしてほしいこと（相談・報告のゴール）
+            </label>
+            <select id="goalType" class="field__input">
+              <option value="">（選択してください）</option>
+              <option value="判断を仰ぎたい">判断を仰ぎたい</option>
+              <option value="指示がほしい">指示がほしい</option>
+              <option value="情報共有のみ">情報共有のみ</option>
+              <option value="緊急対応を依頼したい">緊急対応を依頼したい</option>
             </select>
+          </div>
 
+          <div class="field">
+            <label for="goalDetail" class="field__label">具体的にどうしてほしい？</label>
             <textarea
-              id="requestDetail"
-              class="form__control form__control--textarea"
-              placeholder="例：今後の歩行訓練の強度と、整形外科受診の要否についてご意見をいただきたいです。"
+              id="goalDetail"
+              class="field__textarea"
+              rows="2"
+              placeholder="例：薬を医師に処方してほしい。"
             ></textarea>
           </div>
 
-          <!-- ボタン -->
-          <div class="form__actions">
-            <button id="generateBtn" type="submit" class="btn-primary">
-              報告文をつくる
-            </button>
-          </div>
+          <p class="form__note">
+            ※主要な項目は埋まっていますか？ 内容を読み直してから送信してください。
+          </p>
 
-          <!-- フィードバック -->
-          <div id="feedback" class="feedback" aria-live="polite"></div>
+          <button type="submit" id="generateBtn" class="btn-primary">
+            報告文をつくる
+          </button>
         </form>
       </section>
 
-      <!-- 📄 生成された報告文 -->
+      <!-- 出力エリア -->
       <section class="card">
         <h2 class="card__title">2. 生成された報告文</h2>
-        <p class="card__help">
+        <p class="card__subtitle">
           そのままコピーして LINE / メール / 申し送りシート等に貼り付けて使えます。
         </p>
         <textarea
-          id="resultText"
-          class="form__control form__control--textarea result-area"
-          placeholder="ここに報告文が表示されます。"
+          id="outputText"
+          class="output"
+          rows="10"
+          readonly
         ></textarea>
       </section>
     </main>

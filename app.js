@@ -1,112 +1,91 @@
-// Care Report AI - フロント側ロジック（試作版）
-
 document.addEventListener("DOMContentLoaded", () => {
-  const form = document.getElementById("reportForm");
-  const resultText = document.getElementById("resultText");
-  const feedback = document.getElementById("feedback");
+  const form = document.getElementById("report-form");
+  const output = document.getElementById("outputText");
 
-  form.addEventListener("submit", (e) => {
-    e.preventDefault();
+  form.addEventListener("submit", (event) => {
+    event.preventDefault();
 
-    // 入力値を取得
-    const stance = getValue("stance");
-    const what = getValue("what");
-    const when = getValue("when");
-    const where = getValue("where");
-    const who = getValue("who");
-    const condition = getValue("condition");
-    const action = getValue("action");
-    const requestType = getValue("requestType");
-    const requestDetail = getValue("requestDetail");
+    const reporterName = document.getElementById("reporterName").value.trim();
+    const role = document.getElementById("role").value.trim(); // ← 今は使わない（将来用）
 
-    const bpSys = getValue("bpSys");
-    const bpDia = getValue("bpDia");
-    const pulse = getValue("pulse");
-    const spo2 = getValue("spo2");
-    const temp = getValue("temp");
+    const whatHappened = document.getElementById("whatHappened").value.trim();
+    const when = document.getElementById("when").value.trim();
+    const where = document.getElementById("where").value.trim();
+    const who = document.getElementById("who").value.trim();
 
-    // 必須チェック
-    const missing = [];
-    if (!what) missing.push("何が起きたか");
-    if (!when) missing.push("いつ");
-    if (!where) missing.push("どこで");
-    if (!who) missing.push("誰が");
-    if (!action) missing.push("どう対応したか");
-    if (!requestDetail) missing.push("相手にしてほしいこと");
+    const bpSys = document.getElementById("bpSys").value.trim();
+    const bpDia = document.getElementById("bpDia").value.trim();
+    const pulse = document.getElementById("pulse").value.trim();
+    const spo2 = document.getElementById("spo2").value.trim();
+    const temp = document.getElementById("temp").value.trim();
+    const currentStatus = document.getElementById("currentStatus").value.trim();
 
-    if (missing.length > 0) {
-      feedback.innerHTML =
-        "⚠️ 次の項目が未入力です：" + missing.join(" / ");
-      feedback.className = "feedback feedback__warn";
-      // それでも文章は作る（学習用）
-    } else {
-      feedback.innerHTML =
-        "✅ 主要な項目は埋まっています。内容を読み直してから送信してください。";
-      feedback.className = "feedback feedback__ok";
+    const yourAction = document.getElementById("yourAction").value.trim();
+    const goalType = document.getElementById("goalType").value.trim();
+    const goalDetail = document.getElementById("goalDetail").value.trim();
+
+    // 最低限のチェック：報告者名と「何が起きたか」と対応
+    if (!reporterName || !whatHappened || !yourAction) {
+      alert("「報告者の名前」「何が起きた？」「その時どう対応した？」は必須です。");
+      return;
     }
 
-    // バイタル文の組み立て
-    const vitalParts = [];
-    if (bpSys || bpDia) {
-      vitalParts.push(
-        `血圧 ${bpSys || "?"}/${bpDia || "?"} mmHg`
-      );
-    }
-    if (pulse) vitalParts.push(`脈拍 ${pulse} 回/分`);
-    if (spo2) vitalParts.push(`SpO₂ ${spo2} %`);
-    if (temp) vitalParts.push(`体温 ${temp} ℃`);
-
-    let vitalSentence = "";
-    if (vitalParts.length > 0) {
-      vitalSentence = "バイタルは、" + vitalParts.join("、") + " です。";
-    }
-
-    // 相手にしてほしいことの一文
-    let requestSentence = "";
-    if (requestType || requestDetail) {
-      const head = requestType
-        ? `【${requestType}】`
-        : "【相談したいこと】";
-      requestSentence = head + requestDetail.replace(/^\s+/, "");
-    }
-
-    // 最終報告文の組み立て
     const lines = [];
 
-    lines.push(`●報告者：${stance}`);
-    if (when || where) {
-      lines.push(
-        `●発生日時・場所：${[when, where].filter(Boolean).join("　／　")}`
-      );
-    }
-    if (who) lines.push(`●対象者：${who}`);
-    if (what) lines.push(`●何が起きたか：${what}`);
-    if (condition || vitalSentence) {
-      const base = condition ? condition : "";
-      const space = base && vitalSentence ? " " : "";
-      lines.push(`●現在の状態：${base}${space}${vitalSentence}`);
-    } else if (vitalSentence) {
-      lines.push(`●現在の状態：${vitalSentence}`);
-    }
-    if (action) lines.push(`●あなたの対応：${action}`);
-    if (requestSentence) lines.push(`●相手にお願いしたいこと：${requestSentence}`);
+    // 1. 報告者
+    lines.push(`●報告者：${reporterName}`);
 
-    // 文章が空の場合のフォールバック
-    if (lines.length === 0) {
-      lines.push(
-        "（まだ入力がほとんどありません。フォームに内容を入力すると、自動で報告文が作成されます。）"
-      );
+    // 2. 発生日時・場所
+    const whenText = when || "（未記入）";
+    const whereText = where || "（未記入）";
+    lines.push(`●発生日時・場所：${whenText}　／　${whereText}`);
+
+    // 3. 対象者
+    if (who) {
+      lines.push(`●対象者：${who}`);
     }
 
-    resultText.value = lines.join("\n");
-    // 下の方まで自動スクロールすると気持ちいい
-    resultText.scrollIntoView({ behavior: "smooth", block: "start" });
+    // 4. 何が起きたか
+    lines.push(`●何が起きたか：${whatHappened}`);
+
+    // 5. 現在の状態 ＋ バイタル
+    let statusLine = "●現在の状態：";
+    statusLine += currentStatus || "（記載なし）";
+
+    const vitalParts = [];
+
+    if (bpSys || bpDia) {
+      const bpText = `${bpSys || "?"}/${bpDia || "?"} mmHg`;
+      vitalParts.push(`血圧 ${bpText}`);
+    }
+    if (pulse) {
+      vitalParts.push(`脈拍 ${pulse} 回/分`);
+    }
+    if (spo2) {
+      vitalParts.push(`SpO₂ ${spo2} %`);
+    }
+    if (temp) {
+      vitalParts.push(`体温 ${temp} ℃`);
+    }
+
+    if (vitalParts.length > 0) {
+      statusLine += ` バイタルは、${vitalParts.join("、")} です。`;
+    }
+
+    lines.push(statusLine);
+
+    // 6. あなたの対応
+    lines.push(`●あなたの対応：${yourAction}`);
+
+    // 7. 相手にお願いしたいこと
+    if (goalType || goalDetail) {
+      const typeText = goalType || "（目的：未選択）";
+      const detailText = goalDetail ? ` ${goalDetail}` : "";
+      lines.push(`●相手にお願いしたいこと：【${typeText}】${detailText}`);
+    }
+
+    // テキストエリアに出力
+    output.value = lines.join("\n");
+    output.scrollTop = 0;
   });
 });
-
-// 共通：値取得ヘルパー
-function getValue(id) {
-  const el = document.getElementById(id);
-  if (!el) return "";
-  return el.value.trim();
-}

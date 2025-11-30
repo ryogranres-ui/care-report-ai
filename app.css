@@ -7,182 +7,192 @@
 
 body {
   margin: 0;
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
-    sans-serif;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   background: #f3f4f6;
   color: #111827;
 }
 
-.page {
-  max-width: 980px;
+.app {
+  max-width: 960px;
   margin: 0 auto;
-  padding: 24px 12px 40px;
+  padding: 24px 16px 40px;
 }
 
 /* ヘッダー */
 .header h1 {
-  margin: 0;
-  font-size: 1.7rem;
-}
-
-.header__subtitle {
-  margin: 4px 0 2px;
-  font-size: 0.95rem;
+  margin: 0 0 4px;
+  font-size: 1.6rem;
 }
 
 .header__note {
-  margin: 0;
-  font-size: 0.8rem;
-  opacity: 0.8;
+  margin: 0 0 24px;
+  font-size: 0.9rem;
+  color: #4b5563;
 }
 
 /* カード */
 .card {
   background: #ffffff;
-  border-radius: 12px;
-  padding: 20px 18px;
-  margin-top: 18px;
-  box-shadow: 0 10px 20px rgba(15, 23, 42, 0.08);
+  border-radius: 16px;
+  padding: 20px 20px 24px;
+  box-shadow: 0 10px 25px rgba(15, 23, 42, 0.08);
+  margin-bottom: 20px;
 }
 
 .card__title {
-  margin: 0 0 12px;
+  margin: 0 0 8px;
   font-size: 1.1rem;
 }
 
-.card__help {
-  margin: 0 0 8px;
+.card__subtitle {
+  margin: 0 0 12px;
   font-size: 0.85rem;
-  color: #4b5563;
+  color: #6b7280;
 }
 
-/* フォーム */
-.form__group {
-  margin-bottom: 14px;
+/* フォーム要素 */
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
 }
 
-.form__label {
-  display: block;
-  margin-bottom: 4px;
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.field--group {
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 10px 12px 12px;
+}
+
+.field__label {
   font-size: 0.9rem;
   font-weight: 600;
 }
 
-.form__label--small {
-  display: block;
-  margin-bottom: 4px;
+.required {
+  color: #ef4444;
   font-size: 0.8rem;
+  margin-left: 4px;
 }
 
-.form__control {
+.optional {
+  color: #6b7280;
+  font-size: 0.8rem;
+  margin-left: 4px;
+}
+
+.field__input,
+.field__textarea,
+select {
   width: 100%;
-  font-size: 0.9rem;
   padding: 8px 10px;
+  font-size: 0.9rem;
   border-radius: 8px;
   border: 1px solid #d1d5db;
   outline: none;
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
-.form__control:focus {
+.field__input:focus,
+.field__textarea:focus,
+select:focus {
   border-color: #2563eb;
-  box-shadow: 0 0 0 1px rgba(37, 99, 235, 0.35);
+  box-shadow: 0 0 0 1px rgba(37, 99, 235, 0.2);
 }
 
-.form__control--textarea {
-  min-height: 70px;
+.field__textarea {
   resize: vertical;
+  min-height: 70px;
 }
 
-.form__control--mb8 {
-  margin-bottom: 8px;
+.field__textarea--mt {
+  margin-top: 8px;
 }
 
-/* バッジ */
-.badge {
-  display: inline-block;
-  margin-left: 6px;
-  padding: 1px 6px;
-  font-size: 0.72rem;
-  border-radius: 999px;
-  background: #fee2e2;
-  color: #b91c1c;
-}
-
-/* バイタルのグリッド */
+/* バイタル用グリッド */
 .vital-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 8px;
-  margin-bottom: 8px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 12px;
+  margin-top: 4px;
 }
 
-.vital-grid__item--wide {
-  grid-column: span 2;
+.vital-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
-/* スマホ対応 */
-@media (max-width: 768px) {
-  .page {
-    padding: 16px 10px 32px;
-  }
+.vital-field--wide {
+  grid-column: 1 / -1;
+}
 
-  .vital-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .vital-grid__item--wide {
-    grid-column: span 2;
-  }
+.vital-label {
+  font-size: 0.8rem;
+  color: #4b5563;
 }
 
 /* ボタン */
-.form__actions {
-  margin-top: 16px;
-  text-align: center;
-}
-
 .btn-primary {
-  padding: 10px 32px;
+  margin-top: 8px;
+  width: 100%;
+  padding: 10px 14px;
   border-radius: 999px;
   border: none;
   background: #2563eb;
   color: #ffffff;
-  font-size: 0.95rem;
+  font-size: 1rem;
   font-weight: 600;
   cursor: pointer;
-  box-shadow: 0 10px 25px rgba(37, 99, 235, 0.35);
-  transition: transform 0.08s ease, box-shadow 0.08s ease, background 0.1s ease;
+  transition: background 0.15s ease, transform 0.05s ease, box-shadow 0.05s ease;
+  box-shadow: 0 8px 18px rgba(37, 99, 235, 0.35);
 }
 
 .btn-primary:hover {
   background: #1d4ed8;
   transform: translateY(-1px);
-  box-shadow: 0 14px 30px rgba(37, 99, 235, 0.45);
 }
 
 .btn-primary:active {
+  background: #1e40af;
   transform: translateY(0);
-  box-shadow: 0 6px 14px rgba(37, 99, 235, 0.35);
+  box-shadow: 0 4px 10px rgba(30, 64, 175, 0.35);
 }
 
-/* 結果エリア */
-.result-area {
-  min-height: 180px;
-  font-family: "Yu Gothic", "YuGothic", system-ui, sans-serif;
+/* メモ */
+.form__note {
+  margin: 4px 0 0;
+  font-size: 0.8rem;
+  color: #6b7280;
 }
 
-/* フィードバック表示 */
-.feedback {
-  margin-top: 10px;
-  font-size: 0.85rem;
-  color: #374151;
+/* 出力テキスト */
+.output {
+  width: 100%;
+  min-height: 220px;
+  padding: 10px 12px;
+  font-size: 0.9rem;
+  border-radius: 12px;
+  border: 1px solid #d1d5db;
+  resize: vertical;
+  white-space: pre-wrap;
 }
 
-.feedback__ok {
-  color: #0f766e;
-}
+/* レスポンシブ */
+@media (max-width: 640px) {
+  .app {
+    padding: 16px 10px 28px;
+  }
 
-.feedback__warn {
-  color: #92400e;
+  .card {
+    padding: 16px 14px 20px;
+  }
+
+  .vital-grid {
+    grid-template-columns: 1fr;
+  }
 }
