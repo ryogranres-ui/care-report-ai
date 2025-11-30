@@ -179,3 +179,17 @@ body {
   color: #6b7280;
   padding: 12px 8px 18px;
 }
+.hidden {
+  display: none;
+}
+
+.result__textarea {
+  width: 100%;
+  min-height: 260px;
+  padding: 16px;
+  font-family: "Yu Gothic", system-ui, sans-serif;
+  line-height: 1.6;
+  border-radius: 12px;
+  border: 1px solid #ddd;
+  resize: vertical;
+}

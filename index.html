@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8" />
-  <title>Care Report AI - 報告サポート（試作）</title>
+  <title>Care Report AI（試作版）</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="stylesheet" href="app.css" />
 </head>
@@ -10,88 +10,145 @@
   <header class="header">
     <h1>Care Report AI（試作版）</h1>
     <p class="header__subtitle">
-      質問に答えるだけで、<strong>伝わる報告文</strong>を自動で組み立てる練習ツールです。
+      質問に答えるだけで、伝わる報告文を自動で組み立てる練習ツールです。
     </p>
     <p class="header__note">
-      ※まだ AI 接続前の<strong>デモ版</strong>です。現場での報告練習にお使いください。
+      ※まだ AI 搭載前の試作品です。現場での正式な報告書作成には使わないでください。
     </p>
   </header>
 
   <main class="container">
+    <!-- 1. 入力フォーム -->
     <section class="card">
-      <h2>1. 報告内容を入力</h2>
-      <form id="report-form" class="form">
-        <div class="field">
-          <label for="level">あなたの立場</label>
-          <select id="level" name="level">
-            <option value="新人">新人</option>
-            <option value="中堅">中堅</option>
-            <option value="管理者">管理者・リーダー</option>
+      <h2 class="card__title">1. 報告内容を入力</h2>
+
+      <form id="reportForm" class="form">
+        <!-- 立場 -->
+        <div class="form__group">
+          <label for="role" class="form__label">あなたの立場</label>
+          <select id="role" class="form__select">
+            <option value="">選択してください</option>
+            <option value="新人職員">新人</option>
+            <option value="中堅職員">中堅</option>
+            <option value="管理者・リーダー">管理者・リーダー</option>
           </select>
         </div>
 
-        <div class="field">
-          <label for="title">短い件名（どんな報告？） <span class="badge">必須</span></label>
-          <input id="title" type="text" placeholder="例：A様の転倒について" required />
+        <!-- 件名 -->
+        <div class="form__group">
+          <label for="title" class="form__label">
+            短い件名（どんな報告？） <span class="form__required">必須</span>
+          </label>
+          <input
+            id="title"
+            type="text"
+            class="form__input"
+            placeholder="例：A様の転倒について"
+            required
+          />
         </div>
 
-        <div class="field">
-          <label for="whenWhere">いつ・どこで？ <span class="badge">必須</span></label>
-          <textarea id="whenWhere" rows="2"
+        <!-- いつ・どこで -->
+        <div class="form__group">
+          <label for="whenWhere" class="form__label">
+            いつ・どこで？ <span class="form__required">必須</span>
+          </label>
+          <textarea
+            id="whenWhere"
+            class="form__textarea"
+            rows="2"
             placeholder="例：本日11時ごろ、2階食堂にて。"
-            required></textarea>
+            required
+          ></textarea>
         </div>
 
-        <div class="field">
-          <label for="whoWhat">どの利用者様に、何が起きた？ <span class="badge">必須</span></label>
-          <textarea id="whoWhat" rows="3"
+        <!-- どの利用者様に、何が起きた？ -->
+        <div class="form__group">
+          <label for="whatHappened" class="form__label">
+            どの利用者様に、何が起きた？ <span class="form__required">必須</span>
+          </label>
+          <textarea
+            id="whatHappened"
+            class="form__textarea"
+            rows="3"
             placeholder="例：A様が立ち上がろうとした際、バランスを崩して床に尻もちをつかれました。"
-            required></textarea>
+            required
+          ></textarea>
         </div>
 
-        <div class="field">
-          <label for="careAction">その時あなたはどう対応した？ <span class="badge">必須</span></label>
-          <textarea id="careAction" rows="3"
-            placeholder="例：直ちに駆け寄り、痛みの有無を確認しつつ体位を整えました。バイタル測定を実施し、氷嚢で冷却しました。"
-            required></textarea>
+        <!-- その時どう対応した？ -->
+        <div class="form__group">
+          <label for="yourAction" class="form__label">
+            その時あなたはどう対応した？ <span class="form__required">必須</span>
+          </label>
+          <textarea
+            id="yourAction"
+            class="form__textarea"
+            rows="3"
+            placeholder="例：直ちに駆け寄り、痛みの有無を確認しつつ体位を整え、バイタル測定とアイシングを行いました。"
+            required
+          ></textarea>
         </div>
 
-        <div class="field">
-          <label for="currentStatus">今の状態・変化</label>
-          <textarea id="currentStatus" rows="2"
-            placeholder="例：現在も歩行時に軽い痛みを訴えていますが、普段通り会話はできています。"></textarea>
+        <!-- 今の状態・変化 -->
+        <div class="form__group">
+          <label for="currentStatus" class="form__label">
+            今の状態・変化 <span class="form__required">必須</span>
+          </label>
+          <textarea
+            id="currentStatus"
+            class="form__textarea"
+            rows="3"
+            placeholder="例：現在も歩行時に軽い痛みを訴えていますが、会話は普段通りです。"
+            required
+          ></textarea>
         </div>
 
-        <div class="field">
-          <label for="request">相手にどうしてほしい？（相談・報告のゴール）</label>
-          <textarea id="request" rows="2"
-            placeholder="例：今後の観察ポイントと、ご家族への説明内容についてご指示いただきたいです。"></textarea>
+        <!-- 相手にどうしてほしい？ -->
+        <div class="form__group">
+          <label for="requestToOther" class="form__label">
+            相手にどうしてほしい？（相談・報告のゴール） <span class="form__required">必須</span>
+          </label>
+          <textarea
+            id="requestToOther"
+            class="form__textarea"
+            rows="3"
+            placeholder="例：今後の観察ポイントと、ご家族への説明内容について指示いただきたいです。"
+            required
+          ></textarea>
         </div>
 
-        <button type="submit" class="btn-primary">報告文をつくる</button>
+        <!-- ボタン -->
+        <div class="form__actions">
+          <button type="submit" id="generateBtn" class="btn btn--primary">
+            報告文をつくる
+          </button>
+        </div>
       </form>
     </section>
 
-    <section id="result-section" class="card card--result hidden">
-      <h2>2. 生成された報告文</h2>
-      <textarea id="report-output" class="output" rows="12" readonly></textarea>
+    <!-- 2. 生成された報告文 -->
+    <section id="resultSection" class="card result hidden">
+      <h2 class="card__title">2. 生成された報告文</h2>
 
-      <div class="score-block">
-        <p class="score-block__label">報告スコア（練習用）</p>
-        <p class="score-block__score"><span id="score-value">0</span> / 100 点</p>
-        <p class="score-block__level" id="score-level"></p>
-      </div>
+      <p class="result__note">
+        以下の文面を、必要に応じて加筆・修正してお使いください。
+      </p>
 
-      <div class="feedback">
-        <h3>フィードバック</h3>
-        <ul id="feedback-list"></ul>
+      <textarea
+        id="reportOutput"
+        class="result__textarea"
+        rows="12"
+        readonly
+      ></textarea>
+
+      <div class="form__actions">
+        <button type="button" id="copyBtn" class="btn">
+          報告文をコピー
+        </button>
       </div>
     </section>
   </main>
-
-  <footer class="footer">
-    <p>© 2025 Care Report AI（試作）｜現場の「伝わらない報告」をゼロにする練習ツール</p>
-  </footer>
 
   <script src="app.js" defer></script>
 </body>
