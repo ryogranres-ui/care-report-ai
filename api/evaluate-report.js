@@ -1,138 +1,126 @@
-// api/evaluate-report.js
-// Vercel のサーバーレス関数（OpenAI で報告のAIフィードバックを返す）
+import OpenAI from "openai";
+
+const client = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY
+});
 
 export default async function handler(req, res) {
-  // CORS 設定（別ドメインから呼ぶ場合に備えて）
-  res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Methods", "POST,OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
-
-  if (req.method === "OPTIONS") {
-    return res.status(200).end();
-  }
-
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
+  const {
+    mode = "report",
+    reportText,
+    localScore,
+    missingRequired = [],
+    missingOptional = []
+  } = req.body || {};
+
+  if (!reportText) {
+    return res.status(400).json({ error: "reportText is required" });
+  }
+
+  const modeLabel =
+    mode === "instruction" ? "指示モード（上から下への指示）" : "共有・報告モード（現場からの報告）";
+
+  const roleText =
+    mode === "instruction"
+      ? "あなたは日本の介護施設で働く管理者・看護師長として、「職員に出す指示」が現場で誤解なく実行されるかどうかを点検する役割です。"
+      : "あなたは日本の介護施設で働く看護師兼管理者として、「職員からの事故・状態変化などの報告文」をプロの目線でチェックする役割です。";
+
+  const focusText =
+    mode === "instruction"
+      ? "・指示の目的が伝わるか\n・誰が、いつ、何を、どの程度行うかが明確か\n・完了条件と報告ラインがはっきりしているか\n・職員が現場で迷わず動ける内容か"
+      : "・安全に関わる情報（バイタル・意識状態など）が抜けていないか\n・第三者が読んでも状況が正しくイメージできるか\n・再発防止や今後の観察ポイントが含まれているか";
+
+  const systemPrompt = `
+${roleText}
+
+トーンは、叱責ではなく
+・良い点をしっかり認める
+・必要な指摘は遠回しにせず具体的に伝える
+・一緒に報告・指示の質を上げていくコーチング
+を心掛けてください。
+`.trim();
+
+  const userPrompt = `
+【モード】
+${modeLabel}
+
+【ローカルスコアの情報】
+・ローカルスコア：${localScore ?? "不明"}
+・必ず書いておきたい項目として不足していると判定された項目：
+${missingRequired.length ? "- " + missingRequired.join("\n- ") : "なし"}
+・あるとより良い項目として不足していると判定された項目：
+${missingOptional.length ? "- " + missingOptional.join("\n- ") : "なし"}
+
+【チェックの観点】
+${focusText}
+
+【職員が作成した内容】
+${reportText}
+
+---
+
+上記をふまえて、以下の形式で日本語で出力してください。
+
+① 総評（2〜3文）
+　- 良い点（必ず1つ以上）
+	- 気になる点（抽象的な「もう少し詳しく」などではなく、具体的に）
+
+② 良い点の具体例（箇条書き）
+
+③ 改善したほうが良い点（箇条書き）
+　- なぜそれが必要か、短く理由も添えてください。
+
+④ 追加で確認・記載してほしい情報（箇条書き）
+
+⑤ 書き直し例（丁寧な文体）
+　- 施設の管理者や看護師が読んで、状況や指示内容がすぐに分かるレベルの文章にしてください。
+　- 職員本人を責めるニュアンスは入れないでください。
+
+最後に、100点満点中の総合点を「スコア：85」などの形式で一行だけ付けてください。
+`.trim();
+
   try {
-    // --- リクエストボディを安全に取り出す（body / 生ストリーム両対応） ---
-    let reportText = "";
-    let fields = {};
+    const completion = await client.chat.completions.create({
+      model: "gpt-4.1-mini",
+      temperature: 0.4,
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt }
+      ]
+    });
 
-    if (req.body && Object.keys(req.body).length > 0) {
-      // Vercel が JSON をパースしてくれているパターン
-      reportText = req.body.reportText || "";
-      fields = req.body.fields || {};
-    } else {
-      // 念のため、生のストリームから読むパターンも用意
-      let raw = "";
-      await new Promise((resolve, reject) => {
-        req.on("data", (chunk) => {
-          raw += chunk;
-        });
-        req.on("end", resolve);
-        req.on("error", reject);
-      });
+    const fullText = completion.choices[0].message.content || "";
 
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        reportText = parsed.reportText || "";
-        fields = parsed.fields || {};
+    // スコア抽出（「スコア：85」などの行を探す）
+    let aiScore = null;
+    const scoreMatch = fullText.match(/スコア[:：]\s*(\d{1,3})/);
+    if (scoreMatch) {
+      const s = parseInt(scoreMatch[1], 10);
+      if (!Number.isNaN(s)) {
+        aiScore = s;
       }
     }
 
-    if (!reportText) {
-      return res.status(400).json({ error: "reportText is required" });
+    // 書き直し例っぽい部分をざっくり抽出（⑤以降）
+    let rewriteText = "";
+    const rewriteIndex = fullText.indexOf("⑤");
+    if (rewriteIndex >= 0) {
+      rewriteText = fullText.slice(rewriteIndex).replace(/^⑤[^\n]*\n?/, "");
     }
 
-    const openaiApiKey = process.env.OPENAI_API_KEY;
-    if (!openaiApiKey) {
-      console.error("OPENAI_API_KEY is not set");
-      return res
-        .status(500)
-        .json({ error: "OPENAI_API_KEY is not set on server" });
-    }
-
-    // 介護報告用のプロンプト
-    const prompt = `
-あなたは日本の介護施設の管理者です。
-以下の「報告文」と「入力項目」を読み、新人〜中堅職員の学習のために
-分かりやすいフィードバックを行ってください。
-
-【報告文】
-${reportText}
-
-【項目ごとの入力内容】
-${JSON.stringify(fields, null, 2)}
-
-次の JSON 形式で日本語のみで出力してください。
-余計な文章は一切つけず、そのまま JSON だけを返してください。
-
-{
-  "score": 0,                   // 0〜100 の整数スコア
-  "levelLabel": "短いラベル",    // 例: "Lv.2 要点は押さえられている"
-  "comment": "全体フィードバック（良かった点・改善点・次回意識するポイントなど）",
-  "rewriteExample": "より伝わる報告文の書き直し例（3〜6文程度）"
-}
-    `.trim();
-
-    // OpenAI Chat Completions API を呼び出し
-    const apiRes = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${openaiApiKey}`,
-      },
-      body: JSON.stringify({
-        model: "gpt-4o-mini", // 軽量で安いモデル
-        temperature: 0.4,
-        messages: [
-          {
-            role: "system",
-            content:
-              "あなたは日本の介護現場に詳しい管理者です。新人職員にも分かりやすい言葉で、やさしく・具体的にフィードバックを返してください。",
-          },
-          { role: "user", content: prompt },
-        ],
-      }),
-    });
-
-    // OpenAI 側でエラーの場合 → エラー内容をそのまま返す（デバッグ用）
-    if (!apiRes.ok) {
-      const errText = await apiRes.text();
-      console.error("OpenAI API error:", apiRes.status, errText);
-
-      return res.status(200).json({
-        error: "OpenAI API error",
-        status: apiRes.status,
-        detail: errText.slice(0, 500), // 長すぎる時は先頭だけ
-      });
-    }
-
-    const completion = await apiRes.json();
-    const content = completion.choices?.[0]?.message?.content || "";
-
-    let data;
-    try {
-      data = JSON.parse(content);
-    } catch (e) {
-      console.error("Failed to parse AI JSON:", e, content);
-      data = {
-        score: 0,
-        levelLabel: "AI解析に失敗しました",
-        comment:
-          "AIフィードバックの解析に失敗しました。しばらく時間をおいて再度お試しください。",
-        rewriteExample: "",
-      };
-    }
-
-    return res.status(200).json(data);
-  } catch (err) {
-    console.error("Server error:", err);
     return res.status(200).json({
-      error: "Server error",
-      detail: String(err),
+      aiScore,
+      feedbackText: fullText,
+      rewriteText
+    });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({
+      error: "AI評価に失敗しました"
     });
   }
 }

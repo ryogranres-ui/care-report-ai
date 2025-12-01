@@ -1,499 +1,404 @@
-// Care Report AI クライアント側ロジック
+// ===== 設定 =====
+const API_ENDPOINT = "/api/evaluate-report"; // 必要ならVercelのフルURLに変更してください
 
-document.addEventListener("DOMContentLoaded", () => {
-  const generateBtn = document.getElementById("generate-btn");
-  const outputArea = document.getElementById("report-output");
+// ===== DOM取得 =====
+const el = (id) => document.getElementById(id);
 
-  const scoreNumberEl = document.getElementById("score-number");
-  const scoreLevelEl = document.getElementById("score-level");
-  const scoreCommentEl = document.getElementById("score-comment");
+const modeSelect = el("modeSelect");
+const modeDescription = el("modeDescription");
 
-  if (!generateBtn) return;
+const reporterNameInput = el("reporterName");
+const userNameInput = el("userName");
+const eventDateTimeInput = el("eventDateTime");
+const eventPlaceInput = el("eventPlace");
+const summaryInput = el("summary");
+const detailsInput = el("details");
+const actionsInput = el("actions");
+const goalInput = el("goal");
+const vitalInput = el("vital");
+const concernInput = el("concern");
 
-  generateBtn.addEventListener("click", async () => {
-    // 入力値を取得
-    const reporterName = getValue("reporter-name");
-    const position = getValue("position");
-    const what = getValue("what");
-    const when = getValue("when");
-    const where = getValue("where");
-    const who = getValue("who");
+const generatedReportEl = el("generatedReport");
+const localScoreValueEl = el("localScoreValue");
+const localScoreLevelEl = el("localScoreLevel");
+const localScoreDetailEl = el("localScoreDetail");
 
-    const bpSys = getValue("bp-sys");
-    const bpDia = getValue("bp-dia");
-    const pulse = getValue("pulse");
-    const spo2 = getValue("spo2");
-    const temp = getValue("temp");
+const aiScoreValueEl = el("aiScoreValue");
+const aiFeedbackEl = el("aiFeedback");
+const aiRewriteEl = el("aiRewrite");
 
-    const state = getValue("state");
-    const action = getValue("action");
-    const goalKind = getValue("goal-kind");
-    const goalDetail = getValue("goal-detail");
+const errorMessageEl = el("errorMessage");
 
-    // 報告文を組み立て
-    const reportText = buildReportText({
-      reporterName,
-      position,
-      what,
-      when,
-      where,
-      who,
-      bpSys,
-      bpDia,
-      pulse,
-      spo2,
-      temp,
-      state,
-      action,
-      goalKind,
-      goalDetail,
-    });
+// ===== モード定義（共有・報告 / 指示） =====
+const MODE_CONFIG = {
+  report: {
+    name: "共有・報告モード",
+    description:
+      "事故・状態変化・申し送りなど、現場から管理者・看護師への「共有・報告」に使います。",
+    labels: {
+      summary: "概要（ひとことで言うと？）",
+      details: "詳しい状況・経過",
+      actions: "実施した対応",
+      goal: "今後の対応・ゴール／観察ポイント"
+    },
+    hints: {
+      userName:
+        "利用者名はフルネームでなくても、施設内で誰か特定できる表現であればOKです。",
+      eventDateTime:
+        "発生時刻と発見時刻が違う場合は、本文中で区別して書けるとより正確です。",
+      eventPlace:
+        "フロア・部屋番号・どのあたりか（入口付近など）を書くと、再発防止に役立ちます。",
+      summary:
+        "管理者が一読して状況をイメージできる一文を意識してください（いつ・どこで・誰が・どうなったか）。",
+      details:
+        "転倒なら「転倒前の様子」「きっかけ」「転倒直後の反応」、体調変化なら「前日との比較」などを書くと伝わりやすいです。",
+      actions:
+        "観察・処置・家族連絡・受診判断など、「いつ・誰が・何をしたか」を整理して書きましょう。",
+      goal:
+        "今後の観察ポイント（どのような変化があれば再連絡するか等）を書いておくと、夜勤・他職種も動きやすくなります。",
+      vital:
+        "体温・血圧・脈拍・SpO2など、測定したものがあれば記載してください。未測定であればその旨を書いてもOKです。"
+    },
+    checks: [
+      { key: "summary", label: "概要", required: true },
+      { key: "details", label: "詳しい状況・経過", required: true },
+      { key: "actions", label: "実施した対応", required: true },
+      { key: "goal", label: "今後の対応・ゴール／観察ポイント", required: false },
+      { key: "vital", label: "バイタル／数値情報", required: false }
+    ]
+  },
 
-    if (outputArea) {
-      outputArea.value = reportText;
-    }
+  instruction: {
+    name: "指示モード",
+    description:
+      "看護師・管理者・リーダーが、介護職員などに「誤解なく動いてほしい指示」を出すときに使います。",
+    labels: {
+      summary: "指示の概要（何をしてほしいか？）",
+      details: "背景・理由（なぜ必要か？）",
+      actions: "具体的な指示内容（いつ・誰が・何を・どの程度）",
+      goal: "完了条件・報告ライン"
+    },
+    hints: {
+      userName:
+        "指示の対象となる利用者／対象者を記載します。複数いる場合は「◯◯様ほか◯名」などでもOKです。",
+      eventDateTime:
+        "いつからいつまで行ってほしい指示か、目安の期間が分かると動きやすくなります。",
+      eventPlace:
+        "どのフロア／どの時間帯の担当者が行う指示かが分かるように書けると親切です。",
+      summary:
+        "「誰に、何をしてほしいか」を一文で書きます（例：日勤帯の介護職員へ、A様の水分量チェックの強化を依頼）。",
+      details:
+        "最近の状態変化やリスク、医師からの指示など、なぜその指示が必要なのかを書いてください。",
+      actions:
+        "“誰が・いつ・どのように・どのくらい”行うかが分かるように、できるだけ具体的に書きます。",
+      goal:
+        "どの状態になったら指示完了と見なすか、どのタイミングで誰に報告してほしいかを明確にします。",
+      vital:
+        "指示に関係する数値（体温・血圧・食事量・水分量など）があれば記載すると、判断がしやすくなります。"
+    },
+    checks: [
+      { key: "summary", label: "指示の概要", required: true },
+      { key: "details", label: "背景・理由", required: true },
+      { key: "actions", label: "具体的な指示内容", required: true },
+      { key: "goal", label: "完了条件・報告ライン", required: true }
+    ]
+  }
+};
 
-    // ── まずはローカルロジックでスコア＆フィードバック表示（即レスポンス用） ──
-    const scoreResult = calcScore({
-      what,
-      when,
-      where,
-      who,
-      state,
-      bpSys,
-      bpDia,
-      pulse,
-      spo2,
-      temp,
-      action,
-      goalKind,
-      goalDetail,
-    });
+// ===== モード反映 =====
+function applyMode(modeKey) {
+  const mode = MODE_CONFIG[modeKey] ?? MODE_CONFIG.report;
 
-    if (scoreNumberEl) {
-      scoreNumberEl.textContent = String(scoreResult.score);
-    }
+  modeDescription.textContent = `現在は「${mode.name}」です。${mode.description}`;
 
-    const feedback = getScoreFeedback(scoreResult);
+  // ラベル
+  el("label-summary").textContent = mode.labels.summary;
+  el("label-details").textContent = mode.labels.details;
+  el("label-actions").textContent = mode.labels.actions;
+  el("label-goal").textContent = mode.labels.goal;
 
-    if (scoreLevelEl) {
-      scoreLevelEl.textContent = `レベル：${feedback.levelLabel}`;
-    }
-    if (scoreCommentEl) {
-      scoreCommentEl.textContent =
-        feedback.comment + "\n\nAIによる詳細フィードバックを生成中です…";
-    }
+  // ヒント
+  const hints = mode.hints || {};
+  const setHint = (id, key) => {
+    const target = el(id);
+    if (!target) return;
+    target.textContent = hints[key] || "";
+  };
 
-    // ── ここから AI API を呼んで、結果で上書き ──
-    try {
-      const apiUrl = "/api/evaluate-report";
+  setHint("hint-userName", "userName");
+  setHint("hint-eventDateTime", "eventDateTime");
+  setHint("hint-eventPlace", "eventPlace");
+  setHint("hint-summary", "summary");
+  setHint("hint-details", "details");
+  setHint("hint-actions", "actions");
+  setHint("hint-goal", "goal");
+  setHint("hint-vital", "vital");
+}
 
-      const res = await fetch(apiUrl, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          reportText,
-          fields: {
-            reporterName,
-            position,
-            what,
-            when,
-            where,
-            who,
-            bpSys,
-            bpDia,
-            pulse,
-            spo2,
-            temp,
-            state,
-            action,
-            goalKind,
-            goalDetail,
-          },
-        }),
-      });
-
-      if (!res.ok) {
-        console.error("AI API error", res.status);
-        if (scoreCommentEl) {
-          scoreCommentEl.textContent =
-            feedback.comment +
-            "\n\n※ AI 連携でエラーが発生したため、ローカル版フィードバックのみ表示しています。";
-        }
-        return;
-      }
-
-            const data = await res.json();
-
-      // サーバー側でエラーを検知した場合
-      if (data && data.error) {
-        console.error("AI API returned error", data);
-        if (scoreCommentEl) {
-          scoreCommentEl.textContent =
-            feedback.comment +
-            `\n\n※ AI 連携でエラーが発生しました（${data.error}${
-              data.status ? `: ${data.status}` : ""
-            }）。`;
-        }
-        return;
-      }
-
-      if (typeof data.score === "number" && scoreNumberEl) {
-        scoreNumberEl.textContent = String(data.score);
-      }
-      if (data.levelLabel && scoreLevelEl) {
-        scoreLevelEl.textContent = `レベル：${data.levelLabel}`;
-      }
-      if (data.comment && scoreCommentEl) {
-        scoreCommentEl.textContent = data.comment;
-      }
-
-      if (data.rewriteExample) {
-        console.log("AI 書き直し案:\n", data.rewriteExample);
-      }
-
-      // 書き直し案はまずコンソールに出す。UIに載せたくなったらあとでボックス作ろう
-      if (data.rewriteExample) {
-        console.log("AI 書き直し案:\n", data.rewriteExample);
-      }
-    } catch (err) {
-      console.error("AI fetch error", err);
-      if (scoreCommentEl) {
-        scoreCommentEl.textContent =
-          feedback.comment +
-          "\n\n※ AI 連携に失敗したため、ローカル版フィードバックのみ表示しています。";
-      }
-    }
-  });
+modeSelect.addEventListener("change", () => {
+  applyMode(modeSelect.value);
+  // モード切替時にローカルスコアをリセット
+  localScoreValueEl.textContent = "—";
+  localScoreLevelEl.textContent = "未評価";
+  localScoreDetailEl.textContent =
+    "フォームに入力すると、自動的に不足している視点をお知らせします。";
 });
 
-/**
- * 指定 ID の value をトリムして取得
- */
-function getValue(id) {
-  const el = document.getElementById(id);
-  if (!el) return "";
-  return (el.value || "").trim();
+applyMode(modeSelect.value);
+
+// ===== 日時フォーマット =====
+function formatDateTime(value) {
+  if (!value) return "";
+  const d = new Date(value);
+  if (isNaN(d.getTime())) return value;
+  const y = d.getFullYear();
+  const m = `${d.getMonth() + 1}`.padStart(2, "0");
+  const day = `${d.getDate()}`.padStart(2, "0");
+  const hh = `${d.getHours()}`.padStart(2, "0");
+  const mm = `${d.getMinutes()}`.padStart(2, "0");
+  return `${y}年${m}月${day}日 ${hh}時${mm}分頃`;
 }
 
-/**
- * 報告文生成
- */
-function buildReportText(data) {
-  const lines = [];
+// ===== 報告／指示文生成 =====
+function buildReport(modeKey) {
+  const mode = MODE_CONFIG[modeKey] ?? MODE_CONFIG.report;
 
-  // ★ 出力には「名前だけ」出す（立場は出さない）
-  const reporterPart = (() => {
-    const name = (data.reporterName || "").trim();
-    if (!name) return "";
-    return `報告者：${name}`;
-  })();
+  const reporter = reporterNameInput.value.trim();
+  const user = userNameInput.value.trim();
+  const dt = eventDateTimeInput.value;
+  const place = eventPlaceInput.value.trim();
+  const summary = summaryInput.value.trim();
+  const details = detailsInput.value.trim();
+  const actions = actionsInput.value.trim();
+  const goal = goalInput.value.trim();
+  const vital = vitalInput.value.trim();
+  const concern = concernInput.value.trim();
 
-  if (reporterPart) {
-    lines.push(`● ${reporterPart}`);
-  }
+  const rows = [];
 
-  if (data.when || data.where) {
-    lines.push(
-      `● 発生日時・場所：${fallback(data.when)}　／　${fallback(
-        data.where
-      )}`
-    );
-  }
+  // ヘッダー
+  rows.push(`【モード】${mode.name}`);
 
-  if (data.who) {
-    lines.push(`● 対象者：${data.who}`);
+  // 概要
+  if (summary) {
+    rows.push(`\n■ ${mode.labels.summary}\n・${summary}`);
   }
 
-  if (data.what) {
-    lines.push(`● 何が起きたか：${data.what}`);
+  // 基本情報
+  if (user || dt || place) {
+    rows.push("\n■ 基本情報");
+    if (user) rows.push(`・対象：${user}`);
+    if (dt) rows.push(`・日時：${formatDateTime(dt)}`);
+    if (place) rows.push(`・場所：${place}`);
   }
 
-  // 状態・バイタル
-  const vitalParts = [];
-  if (data.bpSys || data.bpDia) {
-    vitalParts.push(
-      `血圧 ${fallback(data.bpSys)} / ${fallback(data.bpDia)} mmHg`
-    );
-  }
-  if (data.pulse) {
-    vitalParts.push(`脈拍 ${data.pulse} 回/分`);
-  }
-  if (data.spo2) {
-    vitalParts.push(`SpO₂ ${data.spo2} %`);
-  }
-  if (data.temp) {
-    vitalParts.push(`体温 ${data.temp} ℃`);
+  // 詳細
+  if (details) {
+    rows.push(`\n■ ${mode.labels.details}\n・${details}`);
   }
 
-  let stateLine = "";
-  if (data.state) {
-    stateLine += data.state.trim();
-    if (vitalParts.length > 0) {
-      stateLine += " バイタルは、" + vitalParts.join("、") + " です。";
-    }
-  } else if (vitalParts.length > 0) {
-    stateLine = "バイタルは、" + vitalParts.join("、") + " です。";
+  // バイタル
+  if (vital) {
+    rows.push(`\n■ バイタル／数値情報\n・${vital}`);
   }
 
-  if (stateLine) {
-    lines.push(`● 現在の状態：${stateLine}`);
+  // 対応／指示内容
+  if (actions) {
+    rows.push(`\n■ ${mode.labels.actions}\n・${actions}`);
   }
 
-  if (data.action) {
-    lines.push(`● あなたの対応：${data.action}`);
+  // 今後の対応／完了条件
+  if (goal) {
+    rows.push(`\n■ ${mode.labels.goal}\n・${goal}`);
   }
 
-  if (data.goalKind || data.goalDetail) {
-    const goalMain = data.goalKind ? `【${data.goalKind}】` : "";
-    const goalText = data.goalDetail || "";
-    lines.push(`● 相手にお願いしたいこと：${goalMain} ${goalText}`.trim());
+  // 違和感
+  if (concern) {
+    rows.push("\n■ 職員として感じた違和感・注意してほしい点\n・" + concern);
   }
 
-  return lines.join("\n");
+  // 作成者
+  if (reporter) {
+    rows.push(`\n■ 作成者\n・${reporter}`);
+  }
+
+  return rows.join("\n");
 }
 
-function fallback(value, alt = "―") {
-  return value && value.trim() ? value.trim() : alt;
-}
+// ===== ローカルスコア =====
+function evaluateLocal(modeKey) {
+  const mode = MODE_CONFIG[modeKey] ?? MODE_CONFIG.report;
+  const checks = mode.checks || [];
 
-function hasText(value) {
-  return value != null && String(value).trim().length > 0;
-}
+  const values = {
+    summary: summaryInput.value.trim(),
+    details: detailsInput.value.trim(),
+    actions: actionsInput.value.trim(),
+    goal: goalInput.value.trim(),
+    vital: vitalInput.value.trim()
+  };
 
-/**
- * スコア計算（状況に応じて「どこで」「バイタル」を見直し）
- */
-function calcScore(fields) {
-  const missing = [];
-  const strengths = [];
-  const improvements = [];
-  let gained = 0;
-  let maxWeight = 0;
+  let missingRequired = [];
+  let missingOptional = [];
 
-  function addMandatory(weight, filled, label, strengthMsg, improveMsg) {
-    maxWeight += weight;
-    if (filled) {
-      gained += weight;
-      if (strengthMsg) strengths.push(strengthMsg);
-    } else {
-      missing.push(label);
-      if (improveMsg) improvements.push(improveMsg);
+  for (const c of checks) {
+    const v = (values[c.key] || "").trim();
+    if (!v) {
+      if (c.required) {
+        missingRequired.push(c.label);
+      } else {
+        missingOptional.push(c.label);
+      }
     }
   }
 
-  function addOptional(weight, filled, strengthMsg) {
-    if (filled) {
-      maxWeight += weight;
-      gained += weight;
-      if (strengthMsg) strengths.push(strengthMsg);
-    }
-  }
+  let score = 100;
+  score -= missingRequired.length * 20;
+  score -= missingOptional.length * 8;
+  if (score < 20) score = 20;
+  if (score > 100) score = 100;
 
-  // 体調・転倒など → バイタル重要
-  const textForVitalsCheck = [fields.what, fields.state, fields.goalDetail]
-    .filter(Boolean)
-    .join(" ");
-  const vitalsImportant = /熱|発熱|体調|具合|痛み|痛い|転倒|ころん|出血|怪我|けが|呼吸|息|SpO2|ＳｐＯ２|酸素|嘔吐|吐|下痢|食欲|食事|水分|むくみ/i.test(
-    textForVitalsCheck
-  );
+  const levelLabel =
+    score >= 90
+      ? "ほぼ完成レベル"
+      : score >= 75
+      ? "管理者が安心できるレベル"
+      : score >= 60
+      ? "大枠OK。もう一歩深掘りしたい"
+      : "重要な情報が不足している可能性あり";
 
-  // 電話・連絡・メール中心かどうか
-  const textForLocationCheck = [fields.what, fields.goalDetail]
-    .filter(Boolean)
-    .join(" ");
-  const locationImportant = !/電話|TEL|tel|連絡|メール|LINE/i.test(
-    textForLocationCheck
-  );
+  localScoreValueEl.textContent = `${score}`;
+  localScoreLevelEl.textContent = levelLabel;
 
-  // 何が起きたか
-  addMandatory(
-    20,
-    hasText(fields.what),
-    "何が起きたか（事象）",
-    "何が起きたかが具体的に書けています。",
-    "「誰が・何を・どうしたか」が分かるように、一文にまとめてみましょう。"
-  );
-
-  // いつ
-  addMandatory(
-    15,
-    hasText(fields.when),
-    "いつ（時間・タイミング）",
-    "起きた時間やタイミングが分かりやすいです。",
-    "「今日の◯時ごろ」「◯月◯日△時」など、具体的な時間を書くとイメージしやすくなります。"
-  );
-
-  // どこで
-  if (locationImportant) {
-    addMandatory(
-      10,
-      hasText(fields.where),
-      "どこで（場所）",
-      "場所が書かれているので、状況がイメージしやすいです。",
-      "現場での出来事の場合は「居室・食堂・廊下」など、場所も一緒に書いておきましょう。"
-    );
-  } else {
-    // 電話・連絡中心 → あればプラス評価のみ
-    addOptional(
-      5,
-      hasText(fields.where),
-      "電話・連絡中心の報告ですが、場所も書かれていて丁寧です。"
+  const messages = [];
+  if (missingRequired.length) {
+    messages.push(
+      `【必ず書いておきたい項目】\n- ${missingRequired.join("\n- ")}`
     );
   }
-
-  // 誰が
-  addMandatory(
-    15,
-    hasText(fields.who),
-    "誰が（対象者）",
-    "対象者が明確で、誰のことかがすぐ分かります。",
-    "利用者様のお名前（イニシャルでも可）を書いて、誰のことか分かるようにしましょう。"
-  );
-
-  // 状態・バイタル
-  const hasStateText = hasText(fields.state);
-  const hasAnyVital = [
-    fields.bpSys,
-    fields.bpDia,
-    fields.pulse,
-    fields.spo2,
-    fields.temp,
-  ].some(hasText);
-
-  if (vitalsImportant) {
-    // 体調・転倒など → 状態＋バイタルを必須扱い
-    addMandatory(
-      15,
-      hasStateText && hasAnyVital,
-      "今の状態・バイタル",
-      "体調に関する報告なので、状態とバイタルが書かれていて安心です。",
-      "体調の変化がテーマのときは、状態の様子に加えて血圧・体温・脈拍・SpO₂ など分かる範囲で書いておきましょう。"
-    );
-  } else {
-    // 体調以外の話題 → 書いてあればプラス評価だけ
-    addOptional(
-      10,
-      hasStateText || hasAnyVital,
-      "今の状態やバイタルも添えてあり、読み手が状況をイメージしやすくなっています。"
+  if (missingOptional.length) {
+    messages.push(
+      `【あるとより良い項目】\n- ${missingOptional.join("\n- ")}`
     );
   }
-
-  // あなたの対応
-  addMandatory(
-    15,
-    hasText(fields.action),
-    "あなたの対応",
-    "あなたがどのように対応したかが書かれており、判断の参考になります。",
-    "あなたが行った対応を、時系列で 1〜2 文にまとめて書いてみましょう。"
-  );
-
-  // ゴール
-  const hasGoalText = hasText(fields.goalKind) || hasText(fields.goalDetail);
-  addMandatory(
-    15,
-    hasGoalText,
-    "報告のゴール（相手にしてほしいこと）",
-    "相手にどうしてほしいかが書かれていて、読み手が動きやすくなっています。",
-    "「◯◯してほしい」「◯◯を確認してほしい」など、相手にしてほしい行動をはっきり書いてみましょう。"
-  );
-
-  if (maxWeight === 0) {
-    return {
-      score: 0,
-      missing,
-      strengths,
-      improvements,
-      vitalsImportant,
-      locationImportant,
-    };
-  }
-
-  const finalScore = Math.max(
-    0,
-    Math.min(100, Math.round((gained / maxWeight) * 100))
-  );
+  localScoreDetailEl.textContent =
+    messages.length > 0
+      ? messages.join("\n\n")
+      : "大きな抜けはありません。AIフィードバックで最終チェックを行いましょう。";
 
   return {
-    score: finalScore,
-    missing,
-    strengths,
-    improvements,
-    vitalsImportant,
-    locationImportant,
+    score,
+    missingRequired,
+    missingOptional
   };
 }
 
-/**
- * スコアに応じたレベル・コメント生成（AI風フィードバック）
- */
-function getScoreFeedback(result) {
-  const {
-    score,
-    missing,
-    strengths,
-    improvements,
-    vitalsImportant,
-    locationImportant,
-  } = result;
-
-  let levelLabel;
-  let baseComment;
-
-  if (score >= 90) {
-    levelLabel = "Lv.3 ほぼ完成形の報告";
-    baseComment =
-      "主要な情報がしっかり揃っていて、とても伝わりやすい報告です。このまま現場でも通用するレベルです。";
-  } else if (score >= 75) {
-    levelLabel = "Lv.2 要点は押さえられている";
-    baseComment =
-      "大事なポイントは概ね書けています。あと 1〜2 箇所だけ具体的にすると、さらに伝わりやすくなります。";
-  } else {
-    levelLabel = "Lv.1 まずは型になれる段階";
-    baseComment =
-      "まだ埋めきれていない項目があります。「何が・いつ・どこで・誰に・どうしてほしいか」を意識して、一つずつ埋めていきましょう。";
-  }
-
-  const totalImportant =
-    1 + // what
-    1 + // when
-    (locationImportant ? 1 : 0) +
-    1 + // who
-    1 + // action
-    1 + // goal
-    (vitalsImportant ? 1 : 0);
-
-  const filledImportant = totalImportant - missing.length;
-
-  let summary = `大事な項目（${totalImportant} 項目）のうち、${filledImportant} 項目が書けています。`;
-  if (missing.length === 0) {
-    summary +=
-      " 今回の内容なら、このままでも十分伝わります。余裕があれば、もう一文だけ具体的な説明を足してみましょう。";
-  } else {
-    summary +=
-      " 特に「" +
-      missing.join("」「") +
-      "」が抜けやすいので、次回はここを一文だけ補ってみましょう。";
-  }
-
-  const goodList =
-    strengths.length > 0
-      ? strengths.slice(0, 3).map((s) => "・" + s).join("\n")
-      : "・まずは書き始められているのが素晴らしいです。少しずつ項目を増やしていきましょう。";
-
-  const improveList =
-    improvements.length > 0
-      ? improvements.slice(0, 3).map((s) => "・" + s).join("\n")
-      : "・大きな抜けはありません。余裕があれば、もう一文だけ具体的な状況説明を追加してみましょう。";
-
-  const comment =
-    baseComment +
-    "\n\n" +
-    summary +
-    "\n\n【良かったところ】\n" +
-    goodList +
-    "\n\n【次に足してみると良いところ】\n" +
-    improveList;
-
-  return { levelLabel, comment };
+// ===== エラー表示 =====
+function showError(message) {
+  errorMessageEl.textContent = message;
+  errorMessageEl.style.display = "block";
 }
+
+function clearError() {
+  errorMessageEl.textContent = "";
+  errorMessageEl.style.display = "none";
+}
+
+// ===== AI呼び出し =====
+async function callAiEvaluate(payload) {
+  const res = await fetch(API_ENDPOINT, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(payload)
+  });
+
+  if (!res.ok) {
+    throw new Error(`AI評価APIでエラーが発生しました（${res.status}）`);
+  }
+
+  return await res.json();
+}
+
+// ===== ボタンイベント =====
+document.getElementById("btnGenerate").addEventListener("click", (e) => {
+  e.preventDefault();
+  clearError();
+
+  const modeKey = modeSelect.value;
+  const reportText = buildReport(modeKey);
+  generatedReportEl.textContent = reportText;
+
+  const localInfo = evaluateLocal(modeKey);
+
+  // AI結果リセット
+  aiScoreValueEl.textContent = "—";
+  aiFeedbackEl.innerHTML = "";
+  aiRewriteEl.textContent = "";
+
+  if (localInfo.missingRequired.length >= 2) {
+    showError(
+      "重要な情報がまだ不足している可能性があります。ローカルスコアの指摘を参考に、追記してからAIチェックを行うと精度が上がります。"
+    );
+  }
+});
+
+document.getElementById("btnEvaluate").addEventListener("click", async (e) => {
+  e.preventDefault();
+  clearError();
+
+  const reportText = generatedReportEl.textContent.trim();
+  if (!reportText) {
+    showError("まず「① AI用の文章を作る」を押してから実行してください。");
+    return;
+  }
+
+  const modeKey = modeSelect.value;
+  const localInfo = evaluateLocal(modeKey);
+
+  aiScoreValueEl.textContent = "…";
+  aiFeedbackEl.innerHTML = "<p>AIが内容を確認しています…</p>";
+  aiRewriteEl.textContent = "";
+
+  try {
+    const payload = {
+      mode: modeKey,
+      reportText,
+      localScore: localInfo.score,
+      missingRequired: localInfo.missingRequired,
+      missingOptional: localInfo.missingOptional
+    };
+
+    const data = await callAiEvaluate(payload);
+
+    const aiScore = data.aiScore ?? data.score ?? null;
+    const feedbackText = data.feedbackText ?? data.feedback ?? "";
+    const rewrite = data.rewriteText ?? data.rewrite ?? "";
+
+    if (aiScore != null) {
+      aiScoreValueEl.textContent = `${aiScore}`;
+    } else {
+      aiScoreValueEl.textContent = "—";
+    }
+
+    if (feedbackText) {
+      aiFeedbackEl.innerHTML = feedbackText
+        .split("\n")
+        .map((line) => `<p>${line}</p>`)
+        .join("");
+    } else {
+      aiFeedbackEl.innerHTML =
+        "<p>AIからの具体的なフィードバックは取得できませんでした。</p>";
+    }
+
+    if (rewrite) {
+      aiRewriteEl.textContent = rewrite;
+    }
+  } catch (err) {
+    console.error(err);
+    aiScoreValueEl.textContent = "—";
+    aiFeedbackEl.innerHTML = "";
+    showError(err.message || "AI評価中にエラーが発生しました。");
+  }
+});

@@ -2,257 +2,211 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8" />
-  <title>Care Report AI（試作版）</title>
+  <title>Care Report AI｜共有・報告＆指示サポート</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <link rel="stylesheet" href="app.css" />
+  <link rel="stylesheet" href="./app.css" />
 </head>
 <body>
-  <main class="page">
-    <header class="page-header">
-      <h1>Care Report AI（試作版）</h1>
-      <p class="page-lead">
-        質問に答えるだけで、伝わる報告文を自動で組み立てる練習ツールです。<br>
-        ※まだ AI 連携前の“型作り”版です。現場での正式な報告書作成の際は必ず内容を確認してください。
+  <header class="app-header">
+    <div class="app-header-inner">
+      <h1 class="app-title">Care Report AI</h1>
+      <p class="app-subtitle">
+        介護現場の「共有・報告」と「指示」を、誰でも伝わる形に整えるAIサポートツール
       </p>
-    </header>
+    </div>
+  </header>
 
-    <!-- 1. 入力エリア -->
-    <section class="card">
-      <h2>1. 報告内容を入力</h2>
+  <main class="app-main">
+    <!-- 入力エリア -->
+    <section class="panel panel-input">
+      <h2 class="panel-title">入力エリア</h2>
 
-      <form id="report-form" class="form">
-        <!-- 立場・名前 -->
-        <div class="field-group">
-          <label for="reporter-name" class="field-label">
-            報告者の名前
-          </label>
-          <input
-            id="reporter-name"
-            type="text"
-            class="field-input"
-            placeholder="例：佐藤"
-          />
-        </div>
-
-        <div class="field-group">
-          <label for="position" class="field-label">
-            あなたの立場
-          </label>
-          <select id="position" class="field-input">
-            <option value="">（任意）選択してください</option>
-            <option value="新人職員">新人職員</option>
-            <option value="中堅職員">中堅職員</option>
-            <option value="リーダー・主任">リーダー・主任</option>
-            <option value="管理者・施設長">管理者・施設長</option>
+      <!-- モード切替 -->
+      <div class="card">
+        <div class="field">
+          <label for="modeSelect" class="field-label">モード</label>
+          <select id="modeSelect" class="field-input">
+            <option value="report">共有・報告モード</option>
+            <option value="instruction">指示モード</option>
           </select>
-          <p class="field-note">
-            ※スコアには影響しません。学習時に「自分の立場」を意識するための項目です。
+          <p id="modeDescription" class="field-hint">
+            現在は「共有・報告モード」です。事故・状態変化・申し送りなどの報告に使います。
           </p>
         </div>
+      </div>
 
-        <!-- 何が起きた？ -->
-        <div class="field-group">
-          <label for="what" class="field-label">
-            何が起きた？（事象）<span class="badge-required">必須</span>
+      <!-- 基本情報 -->
+      <div class="card">
+        <h3 class="card-title">基本情報</h3>
+
+        <div class="field">
+          <label for="reporterName" class="field-label">作成者名</label>
+          <input
+            id="reporterName"
+            class="field-input"
+            type="text"
+            placeholder="例）田中 太郎"
+          />
+          <p class="field-hint">氏名のみでOKです（役職は不要）。</p>
+        </div>
+
+        <div class="field">
+          <label for="userName" class="field-label">対象利用者／対象者</label>
+          <input
+            id="userName"
+            class="field-input"
+            type="text"
+            placeholder="例）A様（イニシャルでも可）"
+          />
+          <p id="hint-userName" class="field-hint"></p>
+        </div>
+
+        <div class="field">
+          <label for="eventDateTime" class="field-label">日時</label>
+          <input id="eventDateTime" class="field-input" type="datetime-local" />
+          <p id="hint-eventDateTime" class="field-hint"></p>
+        </div>
+
+        <div class="field">
+          <label for="eventPlace" class="field-label">場所</label>
+          <input
+            id="eventPlace"
+            class="field-input"
+            type="text"
+            placeholder="例）2階 食堂 入口付近"
+          />
+          <p id="hint-eventPlace" class="field-hint"></p>
+        </div>
+      </div>
+
+      <!-- 内容入力 -->
+      <div class="card">
+        <h3 class="card-title">内容</h3>
+
+        <div class="field">
+          <label for="summary" class="field-label" id="label-summary">
+            概要（ひとことで言うと？）
           </label>
           <textarea
-            id="what"
+            id="summary"
             class="field-input field-textarea"
-            placeholder="例：腰痛の訴えがありました。"
+            rows="2"
+            placeholder="例）歩行中に転倒し、右膝を打撲された。意識は清明。"
           ></textarea>
+          <p id="hint-summary" class="field-hint"></p>
         </div>
 
-        <!-- いつ？ -->
-        <div class="field-group">
-          <label for="when" class="field-label">
-            いつ？（時間・タイミング）<span class="badge-required">必須</span>
+        <div class="field">
+          <label for="details" class="field-label" id="label-details">
+            詳しい状況・経過
           </label>
-          <input
-            id="when"
-            class="field-input"
-            placeholder="例：本日15時頃"
-          />
+          <textarea
+            id="details"
+            class="field-input field-textarea"
+            rows="3"
+            placeholder="例）転倒前の様子、きっかけ、転倒後の訴えなどを記載します。"
+          ></textarea>
+          <p id="hint-details" class="field-hint"></p>
         </div>
 
-        <!-- どこで？ -->
-        <div class="field-group">
-          <label for="where" class="field-label">
-            どこで？（場所）<span class="badge-required">必須</span>
+        <div class="field">
+          <label for="actions" class="field-label" id="label-actions">
+            実施した対応／具体的な指示内容
           </label>
-          <input
-            id="where"
-            class="field-input"
-            placeholder="例：居室、食堂、廊下 など"
-          />
+          <textarea
+            id="actions"
+            class="field-input field-textarea"
+            rows="3"
+            placeholder="例）バイタル測定、アイシング実施、看護師へ報告 など"
+          ></textarea>
+          <p id="hint-actions" class="field-hint"></p>
         </div>
 
-        <!-- 誰が？ -->
-        <div class="field-group">
-          <label for="who" class="field-label">
-            誰が？（対象者）<span class="badge-required">必須</span>
+        <div class="field">
+          <label for="goal" class="field-label" id="label-goal">
+            今後の対応・ゴール／報告ライン
           </label>
-          <input
-            id="who"
-            class="field-input"
-            placeholder="例：A様、伊藤様 など"
-          />
+          <textarea
+            id="goal"
+            class="field-input field-textarea"
+            rows="2"
+            placeholder="例）今夜は2時間ごとに状態確認し、変化があれば看護師へ報告。"
+          ></textarea>
+          <p id="hint-goal" class="field-hint"></p>
+        </div>
+      </div>
+
+      <!-- バイタル・違和感 -->
+      <div class="card">
+        <h3 class="card-title">追加情報（任意）</h3>
+
+        <div class="field">
+          <label for="vital" class="field-label">バイタル／数値情報</label>
+          <textarea
+            id="vital"
+            class="field-input field-textarea"
+            rows="2"
+            placeholder="例）BT 38.2℃、BP 132/74、P 88、SpO2 97％（RA）"
+          ></textarea>
+          <p id="hint-vital" class="field-hint"></p>
         </div>
 
-        <!-- 状態・バイタル -->
-        <div class="field-group">
-          <label class="field-label">
-            今の状態・変化 / バイタル<span class="badge-required">必須</span>
+        <div class="field">
+          <label for="concern" class="field-label">
+            職員として感じた違和感・注意してほしい点
           </label>
+          <textarea
+            id="concern"
+            class="field-input field-textarea"
+            rows="2"
+            placeholder="例）いつもより会話が少なく、表情が乏しい印象あり。"
+          ></textarea>
+          <p id="hint-concern" class="field-hint">
+            「なんとなく気になる」「いつもと違う」という感覚も、立派な情報です。
+          </p>
+        </div>
+      </div>
 
-          <div class="vital-grid">
-            <div class="vital-item">
-              <span class="vital-label">血圧 上</span>
-              <input
-                id="bp-sys"
-                class="field-input"
-                inputmode="numeric"
-                pattern="[0-9]*"
-                placeholder="例：122"
-              />
-            </div>
-            <div class="vital-item">
-              <span class="vital-label">血圧 下</span>
-              <input
-                id="bp-dia"
-                class="field-input"
-                inputmode="numeric"
-                pattern="[0-9]*"
-                placeholder="例：62"
-              />
-            </div>
-            <div class="vital-item">
-              <span class="vital-label">脈拍</span>
-              <input
-                id="pulse"
-                class="field-input"
-                inputmode="numeric"
-                pattern="[0-9]*"
-                placeholder="例：83"
-              />
-            </div>
-            <div class="vital-item">
-              <span class="vital-label">SpO₂</span>
-              <input
-                id="spo2"
-                class="field-input"
-                inputmode="numeric"
-                pattern="[0-9]*"
-                placeholder="例：98"
-              />
-            </div>
-            <div class="vital-item">
-              <span class="vital-label">体温</span>
-              <input
-                id="temp"
-                class="field-input"
-                inputmode="decimal"
-                placeholder="例：36.8"
-              />
-            </div>
+      <!-- ボタン -->
+      <div class="button-row">
+        <button id="btnGenerate" class="btn btn-primary">
+          ① AI用の文章を作る
+        </button>
+        <button id="btnEvaluate" class="btn btn-secondary">
+          ② 管理者目線でチェックしてもらう
+        </button>
+      </div>
+    </section>
+
+    <!-- 出力エリア -->
+    <section class="panel panel-output">
+      <h2 class="panel-title">AIが整えた文章＆フィードバック</h2>
+
+      <!-- ローカルスコア -->
+      <div class="card score-card">
+        <div class="score-main">
+          <div>
+            <p class="score-label">ローカルスコア（入力の充実度）</p>
+            <p id="localScoreValue" class="score-value">—</p>
           </div>
-
-          <textarea
-            id="state"
-            class="field-input field-textarea"
-            placeholder="例：様子は普段と変わらないが、薬が欲しいと言っている。"
-          ></textarea>
+          <div class="score-tags">
+            <span id="localScoreLevel" class="score-tag">未評価</span>
+          </div>
         </div>
-
-        <!-- 対応 -->
-        <div class="field-group">
-          <label for="action" class="field-label">
-            その時あなたはどう対応した？<span class="badge-required">必須</span>
-          </label>
-          <textarea
-            id="action"
-            class="field-input field-textarea"
-            placeholder="例：横になってもらい、安静にしてもらっている。"
-          ></textarea>
+        <div id="localScoreDetail" class="score-detail">
+          フォームに入力すると、自動的に不足している視点をお知らせします。
         </div>
-
-        <!-- ゴール -->
-        <div class="field-group">
-          <label for="goal-kind" class="field-label">
-            相手にしてほしいこと（相談・報告のゴール）<span class="badge-required">必須</span>
-          </label>
-          <select id="goal-kind" class="field-input">
-            <option value="">（選択してください）</option>
-            <option value="判断を仰ぎたい">対応の判断を仰ぎたい</option>
-            <option value="指示がほしい">具体的な指示がほしい</option>
-            <option value="事後報告でよい">事後報告として共有したい</option>
-            <option value="相談したい">今後の方針について相談したい</option>
-          </select>
-        </div>
-
-        <div class="field-group">
-          <label for="goal-detail" class="field-label">
-            具体的にどうしてほしい？<span class="badge-required">必須</span>
-          </label>
-          <textarea
-            id="goal-detail"
-            class="field-input field-textarea"
-            placeholder="例：薬を医師に処方してほしい。受診の要否を確認してほしい。"
-          ></textarea>
-        </div>
-
-        <div class="field-group field-group--confirm">
-          <label class="checkbox">
-            <input type="checkbox" id="confirm-important" />
-            <span>
-              主要な項目は埋まっていますか？ 内容を読み直してから送信してください。
-            </span>
-          </label>
-        </div>
-
-        <div class="field-actions">
-          <button type="button" id="generate-btn" class="btn-primary">
-            報告文をつくる
-          </button>
-        </div>
-      </form>
-    </section>
-
-    <!-- 2. 生成された報告文 -->
-    <section class="card">
-      <h2>2. 生成された報告文</h2>
-      <p class="section-note">
-        そのままコピーして LINE / メール / 申し送りシート等に貼り付けて使えます。
-      </p>
-      <textarea
-        id="report-output"
-        class="field-input field-textarea output-area"
-        placeholder="ここに報告文が表示されます。"
-      ></textarea>
-    </section>
-
-    <!-- 3. スコア＆フィードバック -->
-    <section class="card">
-      <h2>3. 報告スコアとフィードバック（ベータ版）</h2>
-      <p class="section-note">
-        基本の7要素（事象・時間・場所・対象・状態・対応・ゴール）が揃っているかを簡易チェックします。<br>
-        点数とコメントを見ながら、少しずつ「伝わる報告」に近づけていきましょう。
-      </p>
-
-      <div class="score-main">
-        <span class="score-label">総合スコア</span>
-        <span id="score-number" class="score-number">--</span>
-        <span class="score-slash">/ 100</span>
       </div>
 
-      <div id="score-level" class="score-level">
-        レベル：--
+      <!-- 生成された文章 -->
+      <div class="card">
+        <h3 class="card-title">AIに渡す文章（コピー＆共有用）</h3>
+        <p class="field-hint">
+          施設内の申し送りや、他システムへの転記などにコピーして使えます。
+        </p>
+        <pre id="generatedReport" class="report-area"></pre>
       </div>
-      <div id="score-comment" class="score-comment">
-        報告文を作成すると、ここにフィードバックが表示されます。
-      </div>
-    </section>
-  </main>
 
-  <script src="app.js"></script>
-</body>
-</html>
+      <!-- AIフィードバック -->
+      <div class="card">
+        <h3 class="card-tit

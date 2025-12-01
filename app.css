@@ -1,231 +1,191 @@
+:root {
+  --bg: #f5f5f7;
+  --bg-card: #ffffff;
+  --border-subtle: #e2e2ea;
+  --primary: #3b82f6;
+  --primary-soft: #e0edf9;
+  --text-main: #111827;
+  --text-sub: #6b7280;
+  --radius-lg: 16px;
+  --radius-sm: 10px;
+  --shadow-soft: 0 10px 30px rgba(15, 23, 42, 0.08);
+}
+
 *,
 *::before,
 *::after {
   box-sizing: border-box;
 }
 
+html,
 body {
   margin: 0;
+  padding: 0;
   font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
     sans-serif;
-  background: #f5f7fb;
-  color: #111827;
+  background-color: var(--bg);
+  color: var(--text-main);
 }
 
-.page {
-  max-width: 960px;
+/* Header */
+
+.app-header {
+  background: linear-gradient(135deg, #2563eb, #4f46e5);
+  color: #fff;
+  padding: 1.5rem 1rem;
+}
+
+.app-header-inner {
+  max-width: 1120px;
   margin: 0 auto;
-  padding: 24px 16px 48px;
 }
 
-.page-header h1 {
-  margin: 0 0 8px;
+.app-title {
+  margin: 0;
   font-size: 1.6rem;
+  font-weight: 700;
 }
 
-.page-lead {
-  margin: 0 0 24px;
+.app-subtitle {
+  margin: 0.35rem 0 0;
   font-size: 0.9rem;
-  color: #4b5563;
+  opacity: 0.9;
 }
+
+/* Layout */
+
+.app-main {
+  max-width: 1120px;
+  margin: 1rem auto 1.5rem;
+  padding: 0 1rem;
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(0, 1.1fr);
+  gap: 1rem;
+}
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.panel-title {
+  margin: 0 0 0.25rem;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+/* Card */
 
 .card {
-  background: #ffffff;
-  border-radius: 16px;
-  padding: 20px 20px 24px;
-  margin-bottom: 20px;
-  box-shadow: 0 10px 25px rgba(15, 23, 42, 0.08);
+  background-color: var(--bg-card);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-subtle);
+  padding: 0.9rem 0.85rem;
+  box-shadow: var(--shadow-soft);
 }
 
-.card h2 {
-  margin: 0 0 8px;
-  font-size: 1.1rem;
+.card-title {
+  margin: 0 0 0.6rem;
+  font-size: 0.95rem;
+  font-weight: 600;
 }
 
-.section-note {
-  margin: 0 0 16px;
-  font-size: 0.85rem;
-  color: #6b7280;
-}
+/* Field */
 
-/* フォーム系 */
-
-.form {
-  margin-top: 8px;
-}
-
-.field-group {
-  margin-bottom: 16px;
-}
-
-.field-group--confirm {
-  margin-top: 8px;
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin-bottom: 0.6rem;
 }
 
 .field-label {
-  display: block;
-  margin-bottom: 4px;
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   font-weight: 600;
-}
-
-.field-note {
-  margin: 4px 0 0;
-  font-size: 0.8rem;
-  color: #6b7280;
 }
 
 .field-input {
-  width: 100%;
-  padding: 10px 12px;
-  font-size: 0.9rem;
-  border-radius: 10px;
-  border: 1px solid #d1d5db;
+  font-size: 0.88rem;
+  padding: 0.5rem 0.55rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-subtle);
+  background-color: #f9fafb;
   outline: none;
   transition: border-color 0.15s ease, box-shadow 0.15s ease,
     background-color 0.15s ease;
-  background: #f9fafb;
 }
 
 .field-input:focus {
-  border-color: #2563eb;
-  box-shadow: 0 0 0 1px rgba(37, 99, 235, 0.25);
-  background: #ffffff;
+  border-color: var(--primary);
+  background-color: #fff;
+  box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.35);
 }
 
 .field-textarea {
-  min-height: 80px;
   resize: vertical;
+  min-height: 92px;
 }
 
-/* バッジ */
-
-.badge-required {
-  display: inline-block;
-  margin-left: 6px;
-  padding: 2px 6px;
-  border-radius: 999px;
-  background: #fee2e2;
-  color: #b91c1c;
-  font-size: 0.7rem;
-  vertical-align: middle;
+.field-hint {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--text-sub);
 }
 
-/* バイタル */
+/* Buttons */
 
-.vital-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-  gap: 8px;
-  margin-bottom: 8px;
-}
-
-.vital-item .field-input {
-  padding-right: 6px;
-}
-
-.vital-label {
-  display: block;
-  font-size: 0.8rem;
-  color: #6b7280;
-  margin-bottom: 2px;
-}
-
-/* チェックボックス */
-
-.checkbox {
+.button-row {
   display: flex;
-  align-items: flex-start;
-  gap: 8px;
-  font-size: 0.85rem;
-  color: #4b5563;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.4rem;
 }
 
-.checkbox input[type="checkbox"] {
-  margin-top: 3px;
-}
-
-/* ボタン */
-
-.field-actions {
-  margin-top: 16px;
-  text-align: center;
+.btn {
+  flex: 1 1 150px;
+  padding: 0.65rem 0.75rem;
+  border-radius: 999px;
+  border: none;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.1s ease, box-shadow 0.1s ease,
+    background-color 0.15s ease;
 }
 
 .btn-primary {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 220px;
-  padding: 12px 24px;
-  border-radius: 999px;
-  border: none;
-  cursor: pointer;
-  font-size: 0.95rem;
-  font-weight: 600;
-  color: #ffffff;
-  background: linear-gradient(90deg, #2563eb, #1d4ed8);
-  box-shadow: 0 12px 20px rgba(37, 99, 235, 0.35);
-  transition: transform 0.08s ease, box-shadow 0.08s ease,
-    opacity 0.1s ease;
+  background-color: var(--primary);
+  color: #fff;
+  box-shadow: 0 8px 25px rgba(37, 99, 235, 0.35);
 }
 
 .btn-primary:hover {
   transform: translateY(-1px);
-  box-shadow: 0 16px 26px rgba(37, 99, 235, 0.4);
+  box-shadow: 0 12px 30px rgba(37, 99, 235, 0.45);
 }
 
-.btn-primary:active {
-  transform: translateY(1px);
-  box-shadow: 0 8px 12px rgba(37, 99, 235, 0.25);
-  opacity: 0.95;
+.btn-secondary {
+  background-color: #ffffff;
+  color: var(--primary);
+  border: 1px solid var(--primary-soft);
 }
 
-/* 出力エリア */
-
-.output-area {
-  min-height: 140px;
-  font-family: "Yu Gothic", "Meiryo", system-ui, -apple-system,
-    BlinkMacSystemFont, "Segoe UI", sans-serif;
+.btn-secondary:hover {
+  background-color: var(--primary-soft);
 }
 
-/* スコア表示 */
+/* Score */
+
+.score-card {
+  border-left: 4px solid var(--primary);
+}
 
 .score-main {
   display: flex;
-  align-items: baseline;
-  gap: 8px;
-  margin-top: 4px;
-  margin-bottom: 8px;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
 }
 
-.score-label {
-  font-size: 0.9rem;
-  font-weight: 600;
-}
-
-.score-number {
-  font-size: 1.6rem;
-  font-weight: 700;
-  color: #2563eb;
-}
-
-.score-slash {
-  font-size: 0.9rem;
-  color: #6b7280;
-}
-
-.score-level {
-  font-size: 0.9rem;
-  font-weight: 600;
-  margin-bottom: 4px;
-}
-
-.score-comment {
-  font-size: 0.85rem;
-  color: #374151;
-  background: #eff6ff;
-  border-radius: 10px;
-  padding: 10px 12px;
-  white-space: pre-line; /* \n を改行として表示 */
-}
+.score-label
