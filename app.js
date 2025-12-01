@@ -1,5 +1,5 @@
 // ===== 設定 =====
-const API_ENDPOINT = "/api/evaluate-report"; // 必要ならVercelのフルURLに変更してください
+const API_ENDPOINT = "https://care-report-g1fm3ze23-ryo-granres-projects.vercel.app/api/evaluate-report";
 
 // ===== DOM取得 =====
 const el = (id) => document.getElementById(id);
@@ -15,8 +15,14 @@ const summaryInput = el("summary");
 const detailsInput = el("details");
 const actionsInput = el("actions");
 const goalInput = el("goal");
-const vitalInput = el("vital");
 const concernInput = el("concern");
+
+// バイタル用
+const tempInput = el("tempInput");
+const bpSysInput = el("bpSysInput");
+const bpDiaInput = el("bpDiaInput");
+const pulseInput = el("pulseInput");
+const spo2Input = el("spo2Input");
 
 const generatedReportEl = el("generatedReport");
 const localScoreValueEl = el("localScoreValue");
@@ -29,7 +35,7 @@ const aiRewriteEl = el("aiRewrite");
 
 const errorMessageEl = el("errorMessage");
 
-// ===== モード定義（共有・報告 / 指示） =====
+// ===== モード定義 =====
 const MODE_CONFIG = {
   report: {
     name: "共有・報告モード",
@@ -51,13 +57,13 @@ const MODE_CONFIG = {
       summary:
         "管理者が一読して状況をイメージできる一文を意識してください（いつ・どこで・誰が・どうなったか）。",
       details:
-        "転倒なら「転倒前の様子」「きっかけ」「転倒直後の反応」、体調変化なら「前日との比較」などを書くと伝わりやすいです。",
+        "発熱なら前日との比較、転倒なら転倒前の様子～転倒直後の反応などを書くと伝わりやすいです。",
       actions:
         "観察・処置・家族連絡・受診判断など、「いつ・誰が・何をしたか」を整理して書きましょう。",
       goal:
         "今後の観察ポイント（どのような変化があれば再連絡するか等）を書いておくと、夜勤・他職種も動きやすくなります。",
       vital:
-        "体温・血圧・脈拍・SpO2など、測定したものがあれば記載してください。未測定であればその旨を書いてもOKです。"
+        "体温・血圧・脈拍・SpO2など、測定したものがあれば入力してください。未測定であれば空欄でOKです。"
     },
     checks: [
       { key: "summary", label: "概要", required: true },
@@ -159,6 +165,23 @@ function formatDateTime(value) {
   return `${y}年${m}月${day}日 ${hh}時${mm}分頃`;
 }
 
+// ===== バイタル文字列作成 =====
+function buildVital() {
+  const t = tempInput.value;
+  const sys = bpSysInput.value;
+  const dia = bpDiaInput.value;
+  const pulse = pulseInput.value;
+  const spo2 = spo2Input.value;
+
+  const parts = [];
+  if (t) parts.push(`BT ${t}℃`);
+  if (sys && dia) parts.push(`BP ${sys}/${dia}`);
+  if (pulse) parts.push(`P ${pulse}`);
+  if (spo2) parts.push(`SpO2 ${spo2}％`);
+
+  return parts.join("、");
+}
+
 // ===== 報告／指示文生成 =====
 function buildReport(modeKey) {
   const mode = MODE_CONFIG[modeKey] ?? MODE_CONFIG.report;
@@ -171,7 +194,7 @@ function buildReport(modeKey) {
   const details = detailsInput.value.trim();
   const actions = actionsInput.value.trim();
   const goal = goalInput.value.trim();
-  const vital = vitalInput.value.trim();
+  const vital = buildVital();
   const concern = concernInput.value.trim();
 
   const rows = [];
@@ -235,7 +258,7 @@ function evaluateLocal(modeKey) {
     details: detailsInput.value.trim(),
     actions: actionsInput.value.trim(),
     goal: goalInput.value.trim(),
-    vital: vitalInput.value.trim()
+    vital: buildVital()
   };
 
   let missingRequired = [];

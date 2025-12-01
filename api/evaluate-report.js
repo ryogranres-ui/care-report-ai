@@ -22,7 +22,9 @@ export default async function handler(req, res) {
   }
 
   const modeLabel =
-    mode === "instruction" ? "指示モード（上から下への指示）" : "共有・報告モード（現場からの報告）";
+    mode === "instruction"
+      ? "指示モード（上から下への指示）"
+      : "共有・報告モード（現場からの報告）";
 
   const roleText =
     mode === "instruction"
@@ -67,7 +69,7 @@ ${reportText}
 
 ① 総評（2〜3文）
 　- 良い点（必ず1つ以上）
-	- 気になる点（抽象的な「もう少し詳しく」などではなく、具体的に）
+　- 気になる点（抽象的な「もう少し詳しく」ではなく、具体的に）
 
 ② 良い点の具体例（箇条書き）
 
@@ -80,7 +82,7 @@ ${reportText}
 　- 施設の管理者や看護師が読んで、状況や指示内容がすぐに分かるレベルの文章にしてください。
 　- 職員本人を責めるニュアンスは入れないでください。
 
-最後に、100点満点中の総合点を「スコア：85」などの形式で一行だけ付けてください。
+最後に、100点満点中の総合点を「スコア：85」のように一行だけ付けてください。
 `.trim();
 
   try {
@@ -95,7 +97,7 @@ ${reportText}
 
     const fullText = completion.choices[0].message.content || "";
 
-    // スコア抽出（「スコア：85」などの行を探す）
+    // スコア抽出（「スコア：85」など）
     let aiScore = null;
     const scoreMatch = fullText.match(/スコア[:：]\s*(\d{1,3})/);
     if (scoreMatch) {
@@ -105,7 +107,7 @@ ${reportText}
       }
     }
 
-    // 書き直し例っぽい部分をざっくり抽出（⑤以降）
+    // 書き直し例（⑤以降）をざっくり抽出
     let rewriteText = "";
     const rewriteIndex = fullText.indexOf("⑤");
     if (rewriteIndex >= 0) {

@@ -133,6 +133,19 @@ body {
   color: var(--text-sub);
 }
 
+/* Vital grid */
+
+.vital-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 0.5rem;
+}
+
+.vital-grid label {
+  font-size: 0.75rem;
+  color: var(--text-sub);
+}
+
 /* Buttons */
 
 .button-row {
@@ -188,4 +201,126 @@ body {
   gap: 0.5rem;
 }
 
-.score-label
+.score-label {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--text-sub);
+}
+
+.score-value {
+  margin: 0.1rem 0 0;
+  font-size: 1.7rem;
+  font-weight: 700;
+}
+
+.score-value-small {
+  font-size: 1.3rem;
+}
+
+.score-tags {
+  display: flex;
+  gap: 0.25rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.score-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.15rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.74rem;
+  background-color: var(--primary-soft);
+  color: #1d4ed8;
+  font-weight: 500;
+}
+
+.score-detail {
+  margin-top: 0.45rem;
+  font-size: 0.78rem;
+  color: var(--text-sub);
+}
+
+/* Report / Feedback */
+
+.report-area {
+  max-height: 260px;
+  overflow: auto;
+  padding: 0.65rem;
+  background-color: #0f172a;
+  color: #e5e7eb;
+  border-radius: var(--radius-sm);
+  font-size: 0.8rem;
+  line-height: 1.4;
+  white-space: pre-wrap;
+}
+
+.ai-feedback {
+  font-size: 0.8rem;
+  color: var(--text-main);
+  line-height: 1.5;
+}
+
+.ai-feedback p {
+  margin: 0 0 0.35rem;
+}
+
+.ai-feedback ul {
+  padding-left: 1.1rem;
+  margin: 0.1rem 0 0.3rem;
+}
+
+.rewrite-block {
+  margin-top: 0.5rem;
+  font-size: 0.78rem;
+}
+
+.error-message {
+  margin-top: 0.75rem;
+  padding: 0.5rem 0.6rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  background-color: #fee2e2;
+  color: #991b1b;
+  font-size: 0.78rem;
+  display: none;
+}
+
+/* Footer */
+
+.app-footer {
+  text-align: center;
+  font-size: 0.78rem;
+  color: var(--text-sub);
+  margin-bottom: 1rem;
+}
+
+/* Responsive */
+
+@media (max-width: 900px) {
+  .app-main {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .app-header {
+    padding: 1.1rem 1rem;
+  }
+
+  .app-title {
+    font-size: 1.3rem;
+  }
+
+  .app-subtitle {
+    font-size: 0.8rem;
+  }
+
+  .card {
+    padding: 0.85rem 0.8rem;
+  }
+
+  .app-main {
+    padding: 0 0.75rem;
+  }
+}
