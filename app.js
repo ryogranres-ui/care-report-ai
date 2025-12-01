@@ -392,19 +392,18 @@ document.getElementById("btnEvaluate").addEventListener("click", async (e) => {
       missingRequired: localInfo.missingRequired,
       missingOptional: localInfo.missingOptional
     };
-
-    const data = await callAiEvaluate(payload);
-
     const aiScore = data.aiScore ?? data.score ?? null;
     const feedbackText = data.feedbackText ?? data.feedback ?? "";
     const rewrite = data.rewriteText ?? data.rewrite ?? "";
 
+    // ① スコア表示
     if (aiScore != null) {
       aiScoreValueEl.textContent = `${aiScore}`;
     } else {
       aiScoreValueEl.textContent = "—";
     }
 
+    // ② フィードバック（指摘・アドバイス）
     if (feedbackText) {
       aiFeedbackEl.innerHTML = feedbackText
         .split("\n")
@@ -415,10 +414,19 @@ document.getElementById("btnEvaluate").addEventListener("click", async (e) => {
         "<p>AIからの具体的なフィードバックは取得できませんでした。</p>";
     }
 
+    // ③ 書き直し例を「メインの文章」として採用する
     if (rewrite) {
+      // 黒い枠（AIに渡す文章）も AI 書き直し版で上書き
+      generatedReportEl.textContent = rewrite;
       aiRewriteEl.textContent = rewrite;
+    } else {
+      // 書き直しが取れなかった場合は元の文章を維持
+      aiRewriteEl.textContent = "";
     }
-  } catch (err) {
+
+    const data = await callAiEvaluate(payload);
+
+      } catch (err) {
     console.error(err);
     aiScoreValueEl.textContent = "—";
     aiFeedbackEl.innerHTML = "";
