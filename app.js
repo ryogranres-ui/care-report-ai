@@ -380,11 +380,13 @@ document.getElementById("btnEvaluate").addEventListener("click", async (e) => {
   const modeKey = modeSelect.value;
   const localInfo = evaluateLocal(modeKey);
 
+  // ローディング表示
   aiScoreValueEl.textContent = "…";
   aiFeedbackEl.innerHTML = "<p>AIが内容を確認しています…</p>";
   aiRewriteEl.textContent = "";
 
   try {
+    // ★ ここで初めて data を宣言（これより前では使わない）
     const payload = {
       mode: modeKey,
       reportText,
@@ -392,6 +394,9 @@ document.getElementById("btnEvaluate").addEventListener("click", async (e) => {
       missingRequired: localInfo.missingRequired,
       missingOptional: localInfo.missingOptional
     };
+
+    const data = await callAiEvaluate(payload);
+
     const aiScore = data.aiScore ?? data.score ?? null;
     const feedbackText = data.feedbackText ?? data.feedback ?? "";
     const rewrite = data.rewriteText ?? data.rewrite ?? "";
@@ -420,13 +425,9 @@ document.getElementById("btnEvaluate").addEventListener("click", async (e) => {
       generatedReportEl.textContent = rewrite;
       aiRewriteEl.textContent = rewrite;
     } else {
-      // 書き直しが取れなかった場合は元の文章を維持
       aiRewriteEl.textContent = "";
     }
-
-    const data = await callAiEvaluate(payload);
-
-      } catch (err) {
+  } catch (err) {
     console.error(err);
     aiScoreValueEl.textContent = "—";
     aiFeedbackEl.innerHTML = "";
