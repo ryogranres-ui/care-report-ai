@@ -110,20 +110,16 @@ ${reportText}
 - 1項目ごとに
   「元の表現」→「より適切な表現」→「理由」
   の順で書いてください。
-- 例：
-  ・「ぐったりしている」→「呼びかけに対して返答が少なく、動きが緩慢な様子」：どのような状態か具体的に共有できるため。
 
 ③ 不足している情報（箇条書き）
 - 時系列・症状・観察ポイント・安全面などの観点から、
   「ここが書かれていると判断しやすい」という項目を具体的に列挙してください。
 
 ④ 管理者として追加で確認したい点（箇条書き）
-- 現場で後からトラブルになりやすい部分や、医師・家族への説明で重要になりそうな点を中心に挙げてください。
 
 ⑤ 専門的な書き直し例（全文）
 - ${mode === "instruction" ? "職員に出す指示文として" : "管理者・看護師が読む報告文として"}、誤解なく伝わる日本語に書き直してください。
 - 曖昧語は可能な限り客観的な表現に置き換えてください。
-- 箇条書きでも文章形式でも構いませんが、読みやすさを優先してください。
 - 不足している情報については、推測せずに「※この部分の情報があれば、さらに判断しやすくなります」とコメントで補足してください。
 
 最後に、100点満点中の総合点を
@@ -133,7 +129,8 @@ ${reportText}
 
   try {
     const completion = await client.chat.completions.create({
-      model: "gpt-4.1-mini",
+      // ★ ここを gpt-4o-mini にしています（安定版）
+      model: "gpt-4o-mini",
       temperature: 0.4,
       messages: [
         { role: "system", content: systemPrompt },
@@ -157,7 +154,6 @@ ${reportText}
     let rewriteText = "";
     const rewriteIndex = fullText.indexOf("⑤");
     if (rewriteIndex >= 0) {
-      // 「⑤ 専門的な書き直し例（全文）」の行を取り除き、その後ろだけを表示用にする
       rewriteText = fullText
         .slice(rewriteIndex)
         .replace(/^⑤[^\n]*\n?/, "")
@@ -171,8 +167,11 @@ ${reportText}
     });
   } catch (error) {
     console.error("AI評価エラー:", error);
+
+    // デバッグ用にメッセージも返しておく（フロントには表示しないが必要なら見られる）
     return res.status(500).json({
-      error: "AI評価に失敗しました"
+      error: "AI評価に失敗しました",
+      errorMessage: error.message || null
     });
   }
 }
