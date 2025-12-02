@@ -16,11 +16,12 @@ const detailsInput = el("details");
 const actionsInput = el("actions");
 const goalInput = el("goal");
 const concernInput = el("concern");
+
+// 新カード関連
 const aiRewriteCard = document.getElementById("aiRewriteCard");
 const aiRewriteText = document.getElementById("aiRewriteText");
 const btnCopyRewrite = document.getElementById("btnCopyRewrite");
 const btnApplyRewrite = document.getElementById("btnApplyRewrite");
-
 
 // バイタル用
 const tempInput = el("tempInput");
@@ -39,6 +40,10 @@ const aiFeedbackEl = el("aiFeedback");
 const aiRewriteEl = el("aiRewrite");
 
 const errorMessageEl = el("errorMessage");
+
+// ボタン
+const btnGenerate = document.getElementById("btnGenerate");
+const btnEvaluate = document.getElementById("btnEvaluate");
 
 // ===== モード定義 =====
 const MODE_CONFIG = {
@@ -349,92 +354,117 @@ async function callAiEvaluate(payload) {
   return await res.json();
 }
 
-// ===== 管理者チェック（AI評価） =====
-document.getElementById("btnEvaluate").addEventListener("click", async (e) => {
-  e.preventDefault();
-  clearError();
+// ===== ① AI用の文章を作る =====
+if (btnGenerate) {
+  btnGenerate.addEventListener("click", (e) => {
+    e.preventDefault();
+    clearError();
 
-  const reportText = generatedReportEl.textContent.trim();
-  if (!reportText) {
-    showError("まず「① AI用の文章を作る」を押してから実行してください。");
-    return;
-  }
+    const modeKey = modeSelect.value;
+    const reportText = buildReport(modeKey);
 
-  const modeKey = modeSelect.value;
-  const localInfo = evaluateLocal(modeKey);
+    // 黒枠に反映
+    generatedReportEl.textContent = reportText;
 
-  // ローディング表示
-  aiScoreValueEl.textContent = "…";
-  aiFeedbackEl.innerHTML = "<p>AIが内容を確認しています…</p>";
-  aiRewriteEl.textContent = "";
+    // ローカルスコア更新
+    evaluateLocal(modeKey);
 
-  // 改善済み文章カードがあれば一旦隠す
-  if (aiRewriteCard) {
-    aiRewriteCard.style.display = "none";
-  }
-  if (aiRewriteText) {
-    aiRewriteText.value = "";
-  }
-
-  try {
-    const payload = {
-      mode: modeKey,
-      reportText,
-      localScore: localInfo.score,
-      missingRequired: localInfo.missingRequired,
-      missingOptional: localInfo.missingOptional
-    };
-
-    const data = await callAiEvaluate(payload);
-
-    const aiScore = data.aiScore ?? data.score ?? null;
-    const feedbackText = data.feedbackText ?? data.feedback ?? "";
-    const rewrite = data.rewriteText ?? data.rewrite ?? "";
-
-    // ① スコア表示
-    aiScoreValueEl.textContent = aiScore != null ? `${aiScore}` : "—";
-
-    // ② フィードバック（指摘・改善ポイント）
-    if (feedbackText) {
-      aiFeedbackEl.innerHTML = feedbackText
-        .split("\n")
-        .map((line) => `<p>${line}</p>`)
-        .join("");
-    } else {
-      aiFeedbackEl.innerHTML =
-        "<p>AIからのフィードバックは取得できませんでした。</p>";
-    }
-
-    // ③ 書き直し例 → 新しい改善済み文章エリアに反映
-    if (rewrite) {
-      // details 内の旧 aiRewrite も更新しておく
-      aiRewriteEl.textContent = rewrite;
-
-      // 新カードがあればそちらを表示
-      if (aiRewriteCard && aiRewriteText) {
-        aiRewriteCard.style.display = "block";
-        aiRewriteText.value = rewrite;
-      }
-    } else {
-      aiRewriteEl.textContent = "";
-      if (aiRewriteCard && aiRewriteText) {
-        aiRewriteCard.style.display = "none";
-        aiRewriteText.value = "";
-      }
-    }
-  } catch (err) {
-    console.error(err);
+    // AI結果リセット
     aiScoreValueEl.textContent = "—";
     aiFeedbackEl.innerHTML = "";
+    aiRewriteEl.textContent = "";
 
     if (aiRewriteCard && aiRewriteText) {
       aiRewriteCard.style.display = "none";
       aiRewriteText.value = "";
     }
+  });
+}
 
-    showError(err.message || "AI評価中にエラーが発生しました。");
-  }
-});
+// ===== ② 管理者チェック（AI評価） =====
+if (btnEvaluate) {
+  btnEvaluate.addEventListener("click", async (e) => {
+    e.preventDefault();
+    clearError();
+
+    const reportText = generatedReportEl.textContent.trim();
+    if (!reportText) {
+      showError("まず「① AI用の文章を作る」を押してから実行してください。");
+      return;
+    }
+
+    const modeKey = modeSelect.value;
+    const localInfo = evaluateLocal(modeKey);
+
+    // ローディング表示
+    aiScoreValueEl.textContent = "…";
+    aiFeedbackEl.innerHTML = "<p>AIが内容を確認しています…</p>";
+    aiRewriteEl.textContent = "";
+
+    // 改善済み文章カードがあれば一旦隠す
+    if (aiRewriteCard && aiRewriteText) {
+      aiRewriteCard.style.display = "none";
+      aiRewriteText.value = "";
+    }
+
+    try {
+      const payload = {
+        mode: modeKey,
+        reportText,
+        localScore: localInfo.score,
+        missingRequired: localInfo.missingRequired,
+        missingOptional: localInfo.missingOptional
+      };
+
+      const data = await callAiEvaluate(payload);
+
+      const aiScore = data.aiScore ?? data.score ?? null;
+      const feedbackText = data.feedbackText ?? data.feedback ?? "";
+      const rewrite = data.rewriteText ?? data.rewrite ?? "";
+
+      // ① スコア表示
+      aiScoreValueEl.textContent = aiScore != null ? `${aiScore}` : "—";
+
+      // ② フィードバック（指摘・改善ポイント）
+      if (feedbackText) {
+        aiFeedbackEl.innerHTML = feedbackText
+          .split("\n")
+          .map((line) => `<p>${line}</p>`)
+          .join("");
+      } else {
+        aiFeedbackEl.innerHTML =
+          "<p>AIからのフィードバックは取得できませんでした。</p>";
+      }
+
+      // ③ 書き直し例 → 新しい改善済み文章エリアに反映
+      if (rewrite) {
+        aiRewriteEl.textContent = rewrite;
+
+        if (aiRewriteCard && aiRewriteText) {
+          aiRewriteCard.style.display = "block";
+          aiRewriteText.value = rewrite;
+        }
+      } else {
+        aiRewriteEl.textContent = "";
+        if (aiRewriteCard && aiRewriteText) {
+          aiRewriteCard.style.display = "none";
+          aiRewriteText.value = "";
+        }
+      }
+    } catch (err) {
+      console.error(err);
+      aiScoreValueEl.textContent = "—";
+      aiFeedbackEl.innerHTML = "";
+
+      if (aiRewriteCard && aiRewriteText) {
+        aiRewriteCard.style.display = "none";
+        aiRewriteText.value = "";
+      }
+
+      showError(err.message || "AI評価中にエラーが発生しました。");
+    }
+  });
+}
 
 // ===== 改善済み文章：コピー =====
 if (btnCopyRewrite && aiRewriteText) {
@@ -463,3 +493,4 @@ if (btnApplyRewrite && aiRewriteText) {
     });
   });
 }
+
