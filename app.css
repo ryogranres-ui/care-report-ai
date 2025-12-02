@@ -286,6 +286,77 @@ body {
   display: none;
 }
 
+/* AIが整えた改善済み文章エリア */
+
+.card-description {
+  margin: 0 0 0.5rem;
+  font-size: 0.78rem;
+  color: var(--text-sub);
+}
+
+.output-textarea {
+  width: 100%;
+  min-height: 160px;
+  padding: 0.55rem 0.6rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-subtle);
+  font-size: 0.8rem;
+  line-height: 1.5;
+  resize: vertical;
+  background-color: #f9fafb;
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease,
+    background-color 0.15s ease;
+}
+
+.output-textarea:focus {
+  border-color: var(--primary);
+  background-color: #fff;
+  box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.25);
+}
+
+.card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.5rem;
+}
+
+/* 改善済み文章エリア用ボタン */
+
+.primary-button,
+.secondary-button {
+  padding: 0.5rem 0.9rem;
+  border-radius: 999px;
+  border: none;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.1s ease, box-shadow 0.1s ease,
+    background-color 0.15s ease;
+}
+
+.primary-button {
+  background-color: var(--primary);
+  color: #fff;
+  box-shadow: 0 6px 18px rgba(37, 99, 235, 0.35);
+}
+
+.primary-button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 24px rgba(37, 99, 235, 0.45);
+}
+
+.secondary-button {
+  background-color: #ffffff;
+  color: var(--primary);
+  border: 1px solid var(--primary-soft);
+}
+
+.secondary-button:hover {
+  background-color: var(--primary-soft);
+}
+
 /* Footer */
 
 .app-footer {

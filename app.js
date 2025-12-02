@@ -16,6 +16,11 @@ const detailsInput = el("details");
 const actionsInput = el("actions");
 const goalInput = el("goal");
 const concernInput = el("concern");
+const aiRewriteCard = document.getElementById("aiRewriteCard");
+const aiRewriteText = document.getElementById("aiRewriteText");
+const btnCopyRewrite = document.getElementById("btnCopyRewrite");
+const btnApplyRewrite = document.getElementById("btnApplyRewrite");
+
 
 // バイタル用
 const tempInput = el("tempInput");
@@ -367,70 +372,26 @@ document.getElementById("btnGenerate").addEventListener("click", (e) => {
   }
 });
 
-document.getElementById("btnEvaluate").addEventListener("click", async (e) => {
-  e.preventDefault();
-  clearError();
+// ===== 改善済み文章：コピー =====
+btnCopyRewrite.addEventListener("click", () => {
+  const text = aiRewriteText.value.trim();
+  if (!text) return;
 
-  const reportText = generatedReportEl.textContent.trim();
-  if (!reportText) {
-    showError("まず「① AI用の文章を作る」を押してから実行してください。");
-    return;
-  }
+  navigator.clipboard.writeText(text).then(
+    () => alert("改善済みの文章をコピーしました。"),
+    () => alert("コピーに失敗しました。手動で選択してコピーしてください。")
+  );
+});
 
-  const modeKey = modeSelect.value;
-  const localInfo = evaluateLocal(modeKey);
+// ===== 改善済み文章：AIに渡す文章（黒枠）に反映 =====
+btnApplyRewrite.addEventListener("click", () => {
+  const text = aiRewriteText.value.trim();
+  if (!text) return;
 
-  // ローディング表示
-  aiScoreValueEl.textContent = "…";
-  aiFeedbackEl.innerHTML = "<p>AIが内容を確認しています…</p>";
-  aiRewriteEl.textContent = "";
+  generatedReportEl.textContent = text;
 
-  try {
-    // ★ ここで初めて data を宣言（これより前では使わない）
-    const payload = {
-      mode: modeKey,
-      reportText,
-      localScore: localInfo.score,
-      missingRequired: localInfo.missingRequired,
-      missingOptional: localInfo.missingOptional
-    };
-
-    const data = await callAiEvaluate(payload);
-
-    const aiScore = data.aiScore ?? data.score ?? null;
-    const feedbackText = data.feedbackText ?? data.feedback ?? "";
-    const rewrite = data.rewriteText ?? data.rewrite ?? "";
-
-    // ① スコア表示
-    if (aiScore != null) {
-      aiScoreValueEl.textContent = `${aiScore}`;
-    } else {
-      aiScoreValueEl.textContent = "—";
-    }
-
-    // ② フィードバック（指摘・アドバイス）
-    if (feedbackText) {
-      aiFeedbackEl.innerHTML = feedbackText
-        .split("\n")
-        .map((line) => `<p>${line}</p>`)
-        .join("");
-    } else {
-      aiFeedbackEl.innerHTML =
-        "<p>AIからの具体的なフィードバックは取得できませんでした。</p>";
-    }
-
-    // ③ 書き直し例を「メインの文章」として採用する
-    if (rewrite) {
-      // 黒い枠（AIに渡す文章）も AI 書き直し版で上書き
-      generatedReportEl.textContent = rewrite;
-      aiRewriteEl.textContent = rewrite;
-    } else {
-      aiRewriteEl.textContent = "";
-    }
-  } catch (err) {
-    console.error(err);
-    aiScoreValueEl.textContent = "—";
-    aiFeedbackEl.innerHTML = "";
-    showError(err.message || "AI評価中にエラーが発生しました。");
-  }
+  window.scrollTo({
+    top: 0,
+    behavior: "smooth"
+  });
 });

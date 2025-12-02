@@ -268,6 +268,30 @@
           <pre id="aiRewrite" class="report-area"></pre>
         </details>
       </div>
+<!-- AIフィードバック（管理者・看護師目線）カードのすぐ下に追加 -->
+<div class="card" id="aiRewriteCard" style="display: none;">
+  <h2 class="card-title">AIが整えた文章（修正してそのまま使えます）</h2>
+  <p class="card-description">
+    フィードバックをもとに、管理者・看護師に提出しやすい形に整えた文章です。
+    必要に応じて、この欄を手直ししてからコピーしてお使いください。
+  </p>
+
+  <textarea
+    id="aiRewriteText"
+    class="output-textarea"
+    rows="10"
+    placeholder="AIによる書き直し結果がここに表示されます。"
+  ></textarea>
+
+  <div class="card-actions">
+    <button id="btnCopyRewrite" class="primary-button">
+      この文章をコピーする
+    </button>
+    <button id="btnApplyRewrite" class="secondary-button">
+      上の「AIに渡す文章」に反映する
+    </button>
+  </div>
+</div>
 
       <!-- エラー -->
       <div id="errorMessage" class="error-message" role="alert"></div>
