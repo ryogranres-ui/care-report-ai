@@ -4,7 +4,7 @@
 import OpenAI from "openai";
 
 const client = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY
+  apiKey: process.env.OPENAI_API_KEY,
 });
 
 export default async function handler(req, res) {
@@ -17,7 +17,7 @@ export default async function handler(req, res) {
     reportText,
     localScore,
     missingRequired = [],
-    missingOptional = []
+    missingOptional = [],
   } = req.body || {};
 
   if (!reportText) {
@@ -42,35 +42,24 @@ export default async function handler(req, res) {
           "・誰が、いつ、どの時間帯に、何を、どの程度行うのかが明確か",
           "・完了条件と報告ラインがはっきりしているか",
           "・現場の職員が具体的に行動イメージを持てるか",
-          "・危険が予測される場合に、注意点や優先順位が示されているか"
+          "・危険が予測される場合に、注意点や優先順位が示されているか",
         ].join("\n")
       : [
           "・安全に関わる情報（意識・呼吸・バイタル・転倒状況など）が抜けていないか",
           "・第三者が読んでも状況を正しくイメージできるか（いつ・どこで・誰が・どうなったか）",
           "・時系列（前後の経過）が分かるか",
           "・今後の観察ポイントや再発防止の視点が含まれているか",
-          "・家族・医師・管理者への報告ラインが明確か"
+          "・家族・医師・管理者への報告ラインが明確か",
         ].join("\n");
 
   // --- system プロンプト：AIの「性格」 -------------------------
-    const systemPrompt = `
+  const systemPrompt = `
 ${roleText}
-
-${toneText}
 
 あなたは「文章をきれいにする人」ではなく、
 「現場職員の報告力・指示力を育てるコーチ」です。
 
 必ず日本語で出力してください。
-
-トーンは以下を守ってください：
-- 職員を責めず、まず良い点を認める
-- しかし曖昧な表現や危ない表現は、プロとしてはっきり指摘する
-- 「ダメ出し」ではなく「こう書くともっと伝わります」という目線
-- 新人職員でも理解できる言葉で、簡潔に説明する
-...
-`.trim();
-
 
 トーンは以下を守ってください：
 - 職員を責めず、まず良い点を認める
@@ -140,16 +129,15 @@ ${reportText}
 
   try {
     const completion = await client.chat.completions.create({
-      // ★ ここを gpt-4o-mini にしています（安定版）
       model: "gpt-4o-mini",
       temperature: 0.4,
       messages: [
         { role: "system", content: systemPrompt },
-        { role: "user", content: userPrompt }
-      ]
+        { role: "user", content: userPrompt },
+      ],
     });
 
-    const fullText = completion.choices[0].message.content || "";
+    const fullText = completion.choices[0]?.message?.content || "";
 
     // --- スコア抽出（「スコア：85」形式） ---------------------
     let aiScore = null;
@@ -174,15 +162,14 @@ ${reportText}
     return res.status(200).json({
       aiScore,
       feedbackText: fullText,
-      rewriteText
+      rewriteText,
     });
   } catch (error) {
     console.error("AI評価エラー:", error);
 
-    // デバッグ用にメッセージも返しておく（フロントには表示しないが必要なら見られる）
     return res.status(500).json({
       error: "AI評価に失敗しました",
-      errorMessage: error.message || null
+      errorMessage: error?.message ?? null,
     });
   }
 }
