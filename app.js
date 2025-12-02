@@ -1,5 +1,5 @@
 // ===== 設定 =====
-const API_ENDPOINT = "https://care-report-g1fm3ze23-ryo-granres-projects.vercel.app/api/evaluate-report";
+const API_ENDPOINT = "/api/evaluate-report";
 
 // ===== DOM取得 =====
 const el = (id) => document.getElementById(id);
