@@ -349,49 +349,117 @@ async function callAiEvaluate(payload) {
   return await res.json();
 }
 
-// ===== ボタンイベント =====
-document.getElementById("btnGenerate").addEventListener("click", (e) => {
+// ===== 管理者チェック（AI評価） =====
+document.getElementById("btnEvaluate").addEventListener("click", async (e) => {
   e.preventDefault();
   clearError();
 
-  const modeKey = modeSelect.value;
-  const reportText = buildReport(modeKey);
-  generatedReportEl.textContent = reportText;
+  const reportText = generatedReportEl.textContent.trim();
+  if (!reportText) {
+    showError("まず「① AI用の文章を作る」を押してから実行してください。");
+    return;
+  }
 
+  const modeKey = modeSelect.value;
   const localInfo = evaluateLocal(modeKey);
 
-  // AI結果リセット
-  aiScoreValueEl.textContent = "—";
-  aiFeedbackEl.innerHTML = "";
+  // ローディング表示
+  aiScoreValueEl.textContent = "…";
+  aiFeedbackEl.innerHTML = "<p>AIが内容を確認しています…</p>";
   aiRewriteEl.textContent = "";
 
-  if (localInfo.missingRequired.length >= 2) {
-    showError(
-      "重要な情報がまだ不足している可能性があります。ローカルスコアの指摘を参考に、追記してからAIチェックを行うと精度が上がります。"
-    );
+  // 改善済み文章カードがあれば一旦隠す
+  if (aiRewriteCard) {
+    aiRewriteCard.style.display = "none";
+  }
+  if (aiRewriteText) {
+    aiRewriteText.value = "";
+  }
+
+  try {
+    const payload = {
+      mode: modeKey,
+      reportText,
+      localScore: localInfo.score,
+      missingRequired: localInfo.missingRequired,
+      missingOptional: localInfo.missingOptional
+    };
+
+    const data = await callAiEvaluate(payload);
+
+    const aiScore = data.aiScore ?? data.score ?? null;
+    const feedbackText = data.feedbackText ?? data.feedback ?? "";
+    const rewrite = data.rewriteText ?? data.rewrite ?? "";
+
+    // ① スコア表示
+    aiScoreValueEl.textContent = aiScore != null ? `${aiScore}` : "—";
+
+    // ② フィードバック（指摘・改善ポイント）
+    if (feedbackText) {
+      aiFeedbackEl.innerHTML = feedbackText
+        .split("\n")
+        .map((line) => `<p>${line}</p>`)
+        .join("");
+    } else {
+      aiFeedbackEl.innerHTML =
+        "<p>AIからのフィードバックは取得できませんでした。</p>";
+    }
+
+    // ③ 書き直し例 → 新しい改善済み文章エリアに反映
+    if (rewrite) {
+      // details 内の旧 aiRewrite も更新しておく
+      aiRewriteEl.textContent = rewrite;
+
+      // 新カードがあればそちらを表示
+      if (aiRewriteCard && aiRewriteText) {
+        aiRewriteCard.style.display = "block";
+        aiRewriteText.value = rewrite;
+      }
+    } else {
+      aiRewriteEl.textContent = "";
+      if (aiRewriteCard && aiRewriteText) {
+        aiRewriteCard.style.display = "none";
+        aiRewriteText.value = "";
+      }
+    }
+  } catch (err) {
+    console.error(err);
+    aiScoreValueEl.textContent = "—";
+    aiFeedbackEl.innerHTML = "";
+
+    if (aiRewriteCard && aiRewriteText) {
+      aiRewriteCard.style.display = "none";
+      aiRewriteText.value = "";
+    }
+
+    showError(err.message || "AI評価中にエラーが発生しました。");
   }
 });
 
 // ===== 改善済み文章：コピー =====
-btnCopyRewrite.addEventListener("click", () => {
-  const text = aiRewriteText.value.trim();
-  if (!text) return;
+if (btnCopyRewrite && aiRewriteText) {
+  btnCopyRewrite.addEventListener("click", () => {
+    const text = aiRewriteText.value.trim();
+    if (!text) return;
 
-  navigator.clipboard.writeText(text).then(
-    () => alert("改善済みの文章をコピーしました。"),
-    () => alert("コピーに失敗しました。手動で選択してコピーしてください。")
-  );
-});
+    navigator.clipboard.writeText(text).then(
+      () => alert("改善済みの文章をコピーしました。"),
+      () => alert("コピーに失敗しました。手動で選択してコピーしてください。")
+    );
+  });
+}
 
 // ===== 改善済み文章：AIに渡す文章（黒枠）に反映 =====
-btnApplyRewrite.addEventListener("click", () => {
-  const text = aiRewriteText.value.trim();
-  if (!text) return;
+if (btnApplyRewrite && aiRewriteText) {
+  btnApplyRewrite.addEventListener("click", () => {
+    const text = aiRewriteText.value.trim();
+    if (!text) return;
 
-  generatedReportEl.textContent = text;
+    generatedReportEl.textContent = text;
 
-  window.scrollTo({
-    top: 0,
-    behavior: "smooth"
+    window.scrollTo({
+      top: 0,
+      behavior: "smooth"
+    });
   });
-});
+}
