@@ -1,0 +1,14 @@
+{
+  "name": "care-report-ai",
+  "version": "1.0.0",
+  "description": "Care Report AI - 介護現場の報告・共有・指示をAIで整えるツール",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "start": "vercel dev",
+    "dev": "vercel dev"
+  },
+  "dependencies": {
+    "openai": "^4.38.0"
+  }
+}
