@@ -347,11 +347,22 @@ async function callAiEvaluate(payload) {
     body: JSON.stringify(payload)
   });
 
-  if (!res.ok) {
-    throw new Error(`AI評価APIでエラーが発生しました（${res.status}）`);
+  // いったん JSON を取る（エラー時もメッセージを取りたい）
+  let data = null;
+  try {
+    data = await res.json();
+  } catch (e) {
+    // JSON で返ってこなかった場合はそのまま
   }
 
-  return await res.json();
+  if (!res.ok) {
+    const message =
+      (data && (data.errorMessage || data.error)) ||
+      `AI評価APIでエラーが発生しました（${res.status}）`;
+    throw new Error(message);
+  }
+
+  return data;
 }
 
 // ===== ① AI用の文章を作る =====
