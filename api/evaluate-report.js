@@ -18,29 +18,94 @@ export default async function handler(req, res) {
   }
 
   try {
-    // -------------------------------------------
-    // Receive payload
-    // -------------------------------------------
     const {
+      flow, // "question" | undefined
       mode,
       reportText,
       localScore,
       missingRequired,
       missingOptional,
+      seedText,
     } = req.body || {};
 
+    const modeLabel =
+      mode === "instruction" ? "指示モード" : "共有・報告モード";
+
+    // ==============================
+    // ① 質問生成モード
+    // ==============================
+    if (flow === "question") {
+      if (!seedText || !mode) {
+        return res.status(400).json({
+          error: "flow=question の場合、mode と seedText が必須です。",
+        });
+      }
+
+      const systemPrompt = `
+あなたは介護施設の「看護師長 兼 管理者」です。
+職員から簡単な状況説明を聞き、その内容をもとに
+必要な情報を漏れなく集めるための「質問リスト」を作成します。
+
+【ルール】
+- 事故・状態変化・指示のいずれにも対応できる汎用的な質問にする
+- 3〜7個程度の質問にまとめる
+- 「はい／いいえ」で答えられる質問と、短い文章で答える質問を混ぜる
+- 現場職員が答えやすい、日本語として自然な聞き方にする
+- 文章の先頭に「Q1:」「Q2:」の形式で番号を付ける
+- 質問文だけを出力し、解説や前置きは書かない
+      `.trim();
+
+      const userPrompt = `
+【モード】${modeLabel}
+
+【職員からの簡単な状況説明】
+${seedText}
+
+上記の内容をもとに、
+職員から必要な情報を聞き出すための質問を作成してください。
+      `.trim();
+
+      const completion = await client.chat.completions.create({
+        model: "gpt-4o-mini",
+        temperature: 0.4,
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userPrompt },
+        ],
+      });
+
+      const fullText = completion.choices?.[0]?.message?.content || "";
+      const lines = fullText
+        .split("\n")
+        .map((l) => l.trim())
+        .filter(Boolean);
+
+      const questions = [];
+      for (const line of lines) {
+        const m = line.match(/Q\d+[:：]\s*(.+)/);
+        if (m) {
+          questions.push(m[1].trim());
+        } else if (!line.startsWith("Q") && line.length > 0) {
+          questions.push(line);
+        }
+      }
+
+      if (!questions.length) {
+        questions.push("状況をもう少し具体的に教えてください。");
+      }
+
+      return res.status(200).json({ questions });
+    }
+
+    // ==============================
+    // ② 従来の評価モード
+    // ==============================
     if (!reportText || !mode) {
       return res.status(400).json({
         error: "mode と reportText は必須です。",
       });
     }
 
-    const modeLabel =
-      mode === "instruction" ? "指示モード" : "共有・報告モード";
-
-    // -------------------------------------------
-    // System & User Prompts
-    // -------------------------------------------
     const systemPrompt = `
 あなたは介護施設の「看護師長 兼 管理者」として、
 現場職員の報告力・指示力を育てるコーチです。
@@ -51,8 +116,6 @@ export default async function handler(req, res) {
 - 文章は、誰が読んでも分かるように簡潔に。
 - 職員を責める言い方は禁止。改善の方向性を伝える。
 - 文章構成の整理・重複削除・時系列整理も積極的に行う。
-
-あなたは、以下の職員の報告（または指示文）をもとに評価と改善を行ってください。
     `.trim();
 
     const userPrompt = `
@@ -102,9 +165,6 @@ ${reportText}
 <<END_SHORT>>
     `.trim();
 
-    // -------------------------------------------
-    // OpenAI call
-    // -------------------------------------------
     const completion = await client.chat.completions.create({
       model: "gpt-4o-mini",
       temperature: 0.4,
@@ -116,38 +176,27 @@ ${reportText}
 
     const fullText = completion.choices?.[0]?.message?.content || "";
 
-    // -------------------------------------------
-    // Extract score
-    // -------------------------------------------
+    // スコア抽出
     const scoreMatch = fullText.match(/スコア[:：]\s*(\d{1,3})/);
     const aiScore = scoreMatch ? Math.min(100, parseInt(scoreMatch[1], 10)) : null;
 
-    // -------------------------------------------
-    // Extract SHORT block
-    // -------------------------------------------
+    // SHORT抽出
     let shortText = "";
     const shortMatch = fullText.match(/<<SHORT>>([\s\S]*?)<<END_SHORT>>/);
     if (shortMatch) {
       shortText = shortMatch[1].trim();
     }
 
-    // -------------------------------------------
-    // Remove SHORT block from feedback section
-    // -------------------------------------------
+    // SHORTブロックを除いたフィードバック全文
     const feedbackText = fullText.replace(/<<SHORT>>[\s\S]*?<<END_SHORT>>/, "").trim();
 
-    // -------------------------------------------
-    // Extract rewriteText（⑤以降）
-    // -------------------------------------------
+    // ⑤以降の書き直し例
     let rewriteText = "";
     const rewriteMatch = feedbackText.match(/⑤[^\n]*\n([\s\S]*)/);
     if (rewriteMatch) {
       rewriteText = rewriteMatch[1].trim();
     }
 
-    // -------------------------------------------
-    // Return
-    // -------------------------------------------
     return res.status(200).json({
       aiScore,
       feedbackText,

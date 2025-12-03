@@ -29,9 +29,20 @@ const spo2Input = el("spo2Input");
 
 const concernInput = el("concern");
 
+// Quick input
 const quickBulletsInput = el("quickBullets");
 const btnQuickGenerate = el("btnQuickGenerate");
 const quickTagButtons = document.querySelectorAll(".quick-tag");
+
+// Dialogue input
+const dialogueSeedInput = el("dialogueSeed");
+const dialogueHintEl = el("dialogueHint");
+const btnStartDialogue = el("btnStartDialogue");
+const dialogueArea = el("dialogueArea");
+const dialogueAnswerArea = el("dialogueAnswerArea");
+const dialogueAnswerInput = el("dialogueAnswerInput");
+const btnSendAnswer = el("btnSendAnswer");
+const btnFinishDialogue = el("btnFinishDialogue");
 
 // Output areas
 const generatedReportEl = el("generatedReport");
@@ -63,7 +74,13 @@ const errorMessageEl = el("errorMessage");
 /* -------------------------------------------------------
    State
 ------------------------------------------------------- */
-let currentInputMode = "normal";
+let currentInputMode = "normal"; // normal / quick / dialogue
+
+const dialogueState = {
+  questions: [],
+  currentIndex: 0,
+  qa: [], // { question, answer }
+};
 
 /* -------------------------------------------------------
    Mode Configuration
@@ -180,7 +197,6 @@ function applyMode(modeKey) {
   el("hint-vital").textContent = mode.hints.vital;
   el("hint-concern").textContent = mode.hints.concern;
 
-  // Reset score + outputs
   resetOutputs();
 }
 
@@ -318,21 +334,60 @@ function buildReportFromQuick(modeKey) {
 }
 
 /* -------------------------------------------------------
+   Build Report from Dialogue (Q&A)
+------------------------------------------------------- */
+function buildReportFromDialogue(modeKey) {
+  const mode = MODE_CONFIG[modeKey];
+
+  if (!dialogueState.qa.length) {
+    throw new Error("AIの質問に1つ以上回答してから実行してください。");
+  }
+
+  let text = "";
+  text += `【モード】${mode.name}（対話型AIヒアリング）\n\n`;
+
+  text += "■ 職員とのQ&A\n";
+  dialogueState.qa.forEach((item, index) => {
+    const n = index + 1;
+    text += `Q${n}：${item.question}\n`;
+    text += `A${n}：${item.answer}\n\n`;
+  });
+
+  text += "■ 参考情報\n";
+  const targetUser = userNameInput.value.trim();
+  const eventDateTime = eventDateTimeInput.value.trim();
+  const place = eventPlaceInput.value.trim();
+  if (targetUser) text += `・対象者：${targetUser}\n`;
+  if (eventDateTime) text += `・日時：${eventDateTime}\n`;
+  if (place) text += `・場所：${place}\n`;
+  if (!targetUser && !eventDateTime && !place) {
+    text += "・（対象者・日時・場所は未入力）\n";
+  }
+
+  text += "\n※上記Q&Aをもとに、必要であれば文章構成を整えたうえで報告を作成してください。\n";
+
+  return text;
+}
+
+/* -------------------------------------------------------
    Local Score
 ------------------------------------------------------- */
 function evaluateLocal(modeKey) {
   const mode = MODE_CONFIG[modeKey];
 
-  if (currentInputMode === "quick") {
+  // 対話モード・クイックモードは「簡易スコア」
+  if (currentInputMode === "quick" || currentInputMode === "dialogue") {
     let score = 80;
     const missingRequired = [];
     const missingOptional = [];
 
-    if (
-      !summaryInput.value.trim() &&
-      !quickBulletsInput.value.trim()
-    ) {
-      missingRequired.push("概要／要点");
+    const hasCore =
+      summaryInput.value.trim() ||
+      quickBulletsInput.value.trim() ||
+      dialogueState.qa.length > 0;
+
+    if (!hasCore) {
+      missingRequired.push("要点（概要／Q&A）");
       score -= 20;
     }
 
@@ -344,7 +399,7 @@ function evaluateLocal(modeKey) {
     localScoreValueEl.textContent = score;
 
     let level = "";
-    if (score >= 90) level = "ほぼ完成レベル（クイック）";
+    if (score >= 90) level = "ほぼ完成レベル（簡易入力）";
     else if (score >= 75) level = "忙しいときの報告として十分";
     else if (score >= 60) level = "要点は伝わるが、もう少し補足すると◎";
     else level = "重要な情報が不足している可能性あり";
@@ -453,6 +508,11 @@ async function callAiEvaluate(payload) {
       throw new Error(data.error || "AI応答でエラーが発生しました。");
     }
 
+    // 質問生成モードの場合はここで終了
+    if (payload.flow === "question") {
+      return data;
+    }
+
     const { aiScore, feedbackText, rewriteText, shortText } = data;
 
     aiScoreValueEl.textContent = aiScore != null ? aiScore : "-";
@@ -477,7 +537,6 @@ async function callAiEvaluate(payload) {
       aiRewriteText.value = "";
     }
 
-    // 3行要約
     if (shortText && shortText.trim()) {
       aiShortCard.style.display = "block";
       aiShortText.value = shortText.trim();
@@ -488,20 +547,67 @@ async function callAiEvaluate(payload) {
   } catch (err) {
     errorMessageEl.style.display = "block";
     errorMessageEl.textContent = err.message;
+    throw err;
   }
+}
+
+/* -------------------------------------------------------
+   Dialogue helpers
+------------------------------------------------------- */
+function clearDialogue() {
+  dialogueState.questions = [];
+  dialogueState.currentIndex = 0;
+  dialogueState.qa = [];
+  dialogueArea.innerHTML = "";
+  dialogueAnswerArea.style.display = "none";
+  dialogueAnswerInput.value = "";
+}
+
+function appendDialogueQuestion(text) {
+  const wrapper = document.createElement("div");
+  wrapper.className = "dialogue-item";
+  const qDiv = document.createElement("div");
+  qDiv.className = "dialogue-q";
+  const label = document.createElement("span");
+  label.className = "dialogue-q-label";
+  label.textContent = "AI：";
+  const span = document.createElement("span");
+  span.textContent = text;
+  qDiv.appendChild(label);
+  qDiv.appendChild(span);
+  wrapper.appendChild(qDiv);
+  dialogueArea.appendChild(wrapper);
+  dialogueArea.scrollTop = dialogueArea.scrollHeight;
+}
+
+function appendDialogueAnswer(text) {
+  const wrapper = document.createElement("div");
+  wrapper.className = "dialogue-item";
+  const aDiv = document.createElement("div");
+  aDiv.className = "dialogue-a";
+  const label = document.createElement("span");
+  label.className = "dialogue-a-label";
+  label.textContent = "職員：";
+  const span = document.createElement("span");
+  span.textContent = text;
+  aDiv.appendChild(label);
+  aDiv.appendChild(span);
+  wrapper.appendChild(aDiv);
+  dialogueArea.appendChild(wrapper);
+  dialogueArea.scrollTop = dialogueArea.scrollHeight;
 }
 
 /* -------------------------------------------------------
    Events
 ------------------------------------------------------- */
 
-/* モード切替 */
+// モード切替
 modeSelect.addEventListener("change", () => {
   currentInputMode = "normal";
   applyMode(modeSelect.value);
 });
 
-/* 通常モード：AI用文章生成 */
+// 通常モード：AI用文章生成
 btnGenerate.addEventListener("click", () => {
   try {
     currentInputMode = "normal";
@@ -518,7 +624,7 @@ btnGenerate.addEventListener("click", () => {
   }
 });
 
-/* 通常モード：管理者チェック */
+// 通常モード：管理者チェック
 btnEvaluate.addEventListener("click", () => {
   try {
     const modeKey = modeSelect.value;
@@ -540,7 +646,7 @@ btnEvaluate.addEventListener("click", () => {
   }
 });
 
-/* かんたん入力モード */
+// かんたん入力モード
 btnQuickGenerate.addEventListener("click", () => {
   try {
     currentInputMode = "quick";
@@ -565,7 +671,102 @@ btnQuickGenerate.addEventListener("click", () => {
   }
 });
 
-/* 書き直しコピー */
+// AIヒアリング開始
+btnStartDialogue.addEventListener("click", async () => {
+  try {
+    currentInputMode = "dialogue";
+    resetOutputs();
+    clearDialogue();
+
+    const seed = dialogueSeedInput.value.trim();
+    if (!seed) throw new Error("まず「いま起きていること」を1〜2行で入力してください。");
+
+    dialogueHintEl.textContent =
+      "AIが状況に合わせて3〜7個ほど質問を出します。1つずつ回答してください。";
+
+    const modeKey = modeSelect.value;
+
+    const data = await callAiEvaluate({
+      flow: "question",
+      mode: modeKey,
+      seedText: seed,
+    });
+
+    const questions = data.questions || [];
+    if (!questions.length) {
+      throw new Error("AIから質問を取得できませんでした。");
+    }
+
+    dialogueState.questions = questions;
+    dialogueState.currentIndex = 0;
+    dialogueState.qa = [];
+
+    appendDialogueQuestion(questions[0]);
+    dialogueAnswerArea.style.display = "block";
+    dialogueAnswerInput.focus();
+  } catch (err) {
+    errorMessageEl.style.display = "block";
+    errorMessageEl.textContent = err.message;
+  }
+});
+
+// AIヒアリング：回答送信
+btnSendAnswer.addEventListener("click", () => {
+  try {
+    if (!dialogueState.questions.length) return;
+
+    const answer = dialogueAnswerInput.value.trim();
+    if (!answer) return;
+
+    const q = dialogueState.questions[dialogueState.currentIndex];
+    dialogueState.qa.push({ question: q, answer });
+
+    appendDialogueAnswer(answer);
+    dialogueAnswerInput.value = "";
+
+    dialogueState.currentIndex += 1;
+
+    if (dialogueState.currentIndex < dialogueState.questions.length) {
+      const nextQ = dialogueState.questions[dialogueState.currentIndex];
+      appendDialogueQuestion(nextQ);
+      dialogueAnswerInput.focus();
+    } else {
+      dialogueHintEl.textContent =
+        "質問は以上です。「この内容で報告文を作成」を押すと文章が自動生成されます。";
+      dialogueAnswerInput.focus();
+    }
+  } catch (err) {
+    errorMessageEl.style.display = "block";
+    errorMessageEl.textContent = err.message;
+  }
+});
+
+// AIヒアリング：報告文作成
+btnFinishDialogue.addEventListener("click", () => {
+  try {
+    currentInputMode = "dialogue";
+    resetOutputs();
+
+    const modeKey = modeSelect.value;
+    const text = buildReportFromDialogue(modeKey);
+    generatedReportEl.textContent = text;
+
+    const { score, missingRequired, missingOptional } = evaluateLocal(modeKey);
+
+    callAiEvaluate({
+      mode: modeKey,
+      reportText: text,
+      localScore: score,
+      missingRequired,
+      missingOptional,
+    });
+  } catch (err) {
+    errorMessageEl.style.display = "block";
+    errorMessageEl.textContent = err.message;
+  }
+});
+
+// 書き直しコピー
 btnCopyRewrite.addEventListener("click", async () => {
   try {
     await navigator.clipboard.writeText(aiRewriteText.value);
@@ -574,13 +775,13 @@ btnCopyRewrite.addEventListener("click", async () => {
   }
 });
 
-/* 上のAI文章に反映 */
+// 上のAI文章に反映
 btnApplyRewrite.addEventListener("click", () => {
   generatedReportEl.textContent = aiRewriteText.value;
   window.scrollTo({ top: 0, behavior: "smooth" });
 });
 
-/* 3行要約コピー */
+// 3行要約コピー
 btnCopyShort.addEventListener("click", async () => {
   try {
     if (aiShortText.value.trim()) {

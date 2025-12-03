@@ -112,6 +112,10 @@ h1, h2, h3 {
   border-left: 4px solid #4f46e5;
 }
 
+.card-dialogue {
+  border-left: 4px solid #10b981;
+}
+
 .card-header {
   margin-bottom: 0.5rem;
 }
@@ -129,6 +133,10 @@ h1, h2, h3 {
   padding: 0.2rem 0.5rem;
   border-radius: 4px;
   margin-right: 0.5rem;
+}
+
+.step-badge-alt {
+  background: #059669;
 }
 
 .card-description {
@@ -194,6 +202,53 @@ h1, h2, h3 {
   border-color: #4f46e5;
   background: #eef2ff;
   color: #3730a3;
+}
+
+/* ----------------------------------------------
+   Dialogue (AIヒアリング)
+---------------------------------------------- */
+.dialogue-log {
+  margin-top: 0.75rem;
+  max-height: 260px;
+  overflow-y: auto;
+  padding: 0.6rem;
+  border-radius: 6px;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  font-size: 0.85rem;
+}
+
+.dialogue-item {
+  margin-bottom: 0.5rem;
+}
+
+.dialogue-q {
+  background: #ecfeff;
+  border-radius: 6px;
+  padding: 0.4rem 0.6rem;
+  margin-bottom: 0.2rem;
+}
+
+.dialogue-q-label {
+  font-weight: 600;
+  color: #0f766e;
+  margin-right: 0.3rem;
+}
+
+.dialogue-a {
+  background: #eef2ff;
+  border-radius: 6px;
+  padding: 0.4rem 0.6rem;
+}
+
+.dialogue-a-label {
+  font-weight: 600;
+  color: #3730a3;
+  margin-right: 0.3rem;
+}
+
+.dialogue-answer-area {
+  margin-top: 0.8rem;
 }
 
 /* ----------------------------------------------

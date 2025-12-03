@@ -32,6 +32,60 @@
     <section class="layout">
       <!-- 左カラム：入力エリア -->
       <div class="column column-left">
+
+        <!-- 🆕 AIヒアリングモード -->
+        <section class="card card-dialogue">
+          <div class="card-header">
+            <span class="step-badge step-badge-alt">ASK</span>
+            <h2 class="card-title">AIヒアリングモード（質問に答えるだけ）</h2>
+          </div>
+          <p class="card-description">
+            まずは、今の状況を1〜2行でざっくり教えてください。<br />
+            その内容をもとに、AIが必要なことを順番に質問します。
+          </p>
+
+          <div class="form-group">
+            <label for="dialogueSeed" class="field-label">いま起きていること（1〜2行）</label>
+            <textarea
+              id="dialogueSeed"
+              class="input-textarea"
+              rows="2"
+              placeholder="例）◯◯様がトイレから戻る途中でふらついてベッド手前で膝をつきました。頭は打っていませんが、少し痛みを訴えています。"
+            ></textarea>
+            <p class="field-hint" id="dialogueHint">
+              例のように、ざっくりで構いません。難しく考えなくてOKです。
+            </p>
+          </div>
+
+          <div class="actions actions-right">
+            <button type="button" id="btnStartDialogue" class="btn btn-primary">
+              AIに質問してもらう
+            </button>
+          </div>
+
+          <div id="dialogueArea" class="dialogue-log">
+            <!-- ここにAIの質問と職員の回答が積み上がる -->
+          </div>
+
+          <div id="dialogueAnswerArea" class="dialogue-answer-area" style="display:none;">
+            <label for="dialogueAnswerInput" class="field-label">AIからの質問への回答</label>
+            <textarea
+              id="dialogueAnswerInput"
+              class="input-textarea"
+              rows="2"
+              placeholder="ここに回答を入力して「回答を送信」を押してください。"
+            ></textarea>
+            <div class="actions">
+              <button type="button" id="btnSendAnswer" class="btn btn-secondary">
+                回答を送信
+              </button>
+              <button type="button" id="btnFinishDialogue" class="btn btn-outline">
+                この内容で報告文を作成
+              </button>
+            </div>
+          </div>
+        </section>
+
         <!-- かんたん入力モード -->
         <section class="card card-quick">
           <div class="card-header">
@@ -299,7 +353,7 @@
           </div>
         </section>
 
-        <!-- AIによる書き直し例（旧仕様） -->
+        <!-- AIによる書き直し例（全文） -->
         <section class="card">
           <div class="card-header">
             <h2 class="card-title">AIによる書き直し例（全文）</h2>
