@@ -91,6 +91,21 @@ body {
   font-weight: 600;
 }
 
+/* Step badge */
+
+.step-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.1rem 0.5rem;
+  margin-right: 0.4rem;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  background-color: var(--primary-soft);
+  color: #1d4ed8;
+}
+
 /* Field */
 
 .field {
@@ -155,6 +170,19 @@ body {
 .vital-grid .field-input {
   width: 100%;
 }
+
+@media (max-width: 640px) {
+  .vital-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 420px) {
+  .vital-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 
 /* Buttons */
 
