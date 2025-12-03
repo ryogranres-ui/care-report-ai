@@ -47,6 +47,9 @@ const btnEvaluate = document.getElementById("btnEvaluate");
 
 // ===== モード定義 =====
 const MODE_CONFIG = {
+  // -------------------------
+  // 共有・報告モード
+  // -------------------------
   report: {
     name: "共有・報告モード",
     description:
@@ -55,14 +58,16 @@ const MODE_CONFIG = {
       summary: "概要（ひとことで言うと？）",
       details: "詳しい状況・経過",
       actions: "実施した対応",
-      goal: "今後の対応・ゴール／観察ポイント"
+      goal: "今後の対応・ゴール／報告ライン"
     },
     placeholders: {
-      summary: "例）居室内で歩行中にふらつきがあり、転倒しそうになった。",
+      summary: "例）居室前の廊下で転倒し、右膝を打撲された。意識は清明。",
       details:
-        "例）転倒前の様子、きっかけ、転倒直後の訴え・表情などを記載します。",
-      actions: "例）バイタル測定、処置内容、家族・看護師への報告 など",
-      goal: "例）今夜は1時間ごとに状態確認し、変化があれば看護師へ報告。"
+        "例）転倒前の様子、きっかけ、転倒した瞬間の状況、転倒直後の訴えなどを時系列で記載します。",
+      actions:
+        "例）バイタル測定、患部のアイシング、看護師へ報告、家族へ状況説明 など",
+      goal:
+        "例）今夜は2時間ごとに状態確認し、頭痛・吐き気・歩行時のふらつきがあれば看護師に報告する。"
     },
     hints: {
       userName:
@@ -72,66 +77,69 @@ const MODE_CONFIG = {
       eventPlace:
         "フロア・部屋番号・どのあたりか（入口付近など）を書くと、再発防止に役立ちます。",
       summary:
-        "一番伝えたいことを一文で。『いつ・どこで・誰が・どうなったか』を書くと分かりやすいです。",
+        "「いつ・どこで・誰に・何が起きたか」を一文でまとめます。後から読み返した時に状況が一瞬でイメージできることがゴールです。",
       details:
-        "転倒・発熱などの“前後の流れ”と、表情・訴え・反応など、見たままの事実を書いてください。",
+        "直前の様子 → きっかけ → 起きたこと → その直後の反応の順で書くと、管理者が状況を追いやすくなります。",
       actions:
-        "観察・処置・連絡・受診判断など、『いつ・誰が・何をしたか』を箇条書きでもOKです。",
+        "「誰が・いつ・何をしたか」を整理して書きます。観察だけでも立派な対応なので『観察のみ』も正直に記載しましょう。",
       goal:
-        "どの変化があれば再報告するか、どのくらいの頻度で確認するかを書くと、他職種も動きやすくなります。",
+        "今後の観察ポイント（どんな変化があれば再連絡するか）と、誰に報告してほしいかを書きます。",
       vital:
-        "体温・血圧・脈拍・SpO2など、分かる範囲で記載してください。未測定は空欄でOKです。",
+        "体温・血圧・脈拍・SpO2など、測定したものだけでOKです。測定していない項目は空欄で問題ありません。",
       concern:
-        "『なんとなくいつもと違う』と感じたことをそのまま書いてOKです。客観的な表現への変換はAIが行います。"
+        "「なんとなくいつもと違う」「表情が固い」など、言葉にしづらい違和感もそのまま書いてください。判断のヒントになります。"
     },
     checks: [
       { key: "summary", label: "概要", required: true },
       { key: "details", label: "詳しい状況・経過", required: true },
       { key: "actions", label: "実施した対応", required: true },
-      { key: "goal", label: "今後の対応・ゴール／観察ポイント", required: false },
+      { key: "goal", label: "今後の対応・ゴール／報告ライン", required: false },
       { key: "vital", label: "バイタル／数値情報", required: false }
     ]
   },
 
+  // -------------------------
+  // 指示モード
+  // -------------------------
   instruction: {
     name: "指示モード",
     description:
-      "看護師・管理者・リーダーが、介護職員などに『誤解なく動いてほしい指示』を出すときに使います。",
+      "看護師・管理者・リーダーが、介護職員などに「誤解なく動いてほしい指示」を出すときに使います。",
     labels: {
       summary: "指示の概要（誰に／何についてしてほしいか）",
-      details: "背景・理由（なぜこの指示が必要か）",
+      details: "背景・理由（なぜ必要か？）",
       actions: "具体的な指示内容（いつ・誰が・どこで・何を・どの程度）",
       goal: "完了条件・報告ライン"
     },
     placeholders: {
       summary:
-        "例）日勤帯の介護職員へ：A様の水分摂取量の記録強化をお願いします。",
+        "例）日勤帯の介護職員へ、A様の水分摂取量のチェックを強化してほしい。",
       details:
-        "例）ここ数日尿量が減っており、脱水の可能性があるため 等、指示が必要な理由を書きます。",
+        "例）最近の状態変化やリスク、医師・家族からの要望など、なぜこの指示が必要なのかを記載します。",
       actions:
-        "例）・1時間ごとに飲水量を記録　・昼食後に水分補給の声かけ　・変化あれば看護師へ報告 など",
+        "例）早番と日勤の介護職員が、9〜17時の間に2時間ごとに水分量を確認し、記録用紙に○○ml単位で記載する。",
       goal:
-        "例）本日18時時点で普段どおりの摂取量に戻っていること。異常があればその都度看護師へ報告。"
+        "例）1日1500ml以上の摂取が3日間続いたら指示完了とし、達成できない日が続く場合は看護師に報告する。"
     },
     hints: {
       userName:
-        "指示の対象となる利用者／対象者を記載します（例：A様、◯◯様ほか2名 など）。",
+        "指示の対象となる利用者／対象者を書きます。複数いる場合は「◯◯様ほか◯名」などでもOKです。",
       eventDateTime:
-        "いつからいつまで行ってほしい指示か、目安の期間が分かると動きやすくなります。",
+        "いつからいつまで行ってほしい指示か、開始日や期間の目安が分かるように書くと動きやすくなります。",
       eventPlace:
-        "どのフロア／どの時間帯の担当者が行う指示かが分かるように書けると親切です。",
+        "どのフロア／どの時間帯の担当者が行う指示かが分かるように書くと、担当の抜け漏れを防げます。",
       summary:
-        "『誰に・誰のことで・何をしてほしいか』を一文で書きます（例：日勤帯の介護職員へ、A様の水分チェック強化を依頼）。",
+        "『誰に』『何の件で』『どうしてほしいか』を一文でまとめます。読む人が一瞬で「何の指示か」分かることがゴールです。",
       details:
-        "最近の状態変化や医師の指示など、『なぜ必要なのか』を簡潔に書いてください。メモ書きでOKです。",
+        "状態悪化のサイン・最近のトラブル・医師指示など、背景が分かると現場が優先度を判断しやすくなります。",
       actions:
-        "箇条書き歓迎です。『誰が・いつ・どこで・何を・どのくらい』が分かる程度で構いません。",
+        "①誰が ②いつ ③どこで ④何を ⑤どのくらい行うのかを具体的に書きます。「必要に応じて」「適宜」はできるだけ避けましょう。",
       goal:
-        "どこまでできたら指示完了とするか、どのタイミングで誰に報告してほしいかを書きます。",
+        "どの状態になったら指示完了とするか、どのタイミングで・誰に報告してほしいかを明確にします。",
       vital:
-        "指示に関係しそうな数値（体温・血圧・食事量・水分量など）があれば記載すると判断しやすくなります。",
+        "指示に関係する数値（体温・血圧・食事量・水分量・排便回数など）があれば記載してください。なければ空欄でOKです。",
       concern:
-        "『ここが悪化しそう』『ここを気をつけて見てほしい』など、現場に伝えたい注意点があれば自由に書いてください。"
+        "指示を実行するにあたって注意してほしいリスク（転倒・窒息・誤薬など）や、特に気をつけて見てほしい悪化サインを書きます。"
     },
     checks: [
       { key: "summary", label: "指示の概要", required: true },
@@ -141,6 +149,67 @@ const MODE_CONFIG = {
     ]
   }
 };
+
+// ===== モード反映 =====
+function applyMode(modeKey) {
+  const mode = MODE_CONFIG[modeKey] ?? MODE_CONFIG.report;
+
+  // モード説明
+  modeDescription.textContent = `現在は「${mode.name}」です。${mode.description}`;
+
+  // ラベル
+  el("label-summary").textContent = mode.labels.summary;
+  el("label-details").textContent = mode.labels.details;
+  el("label-actions").textContent = mode.labels.actions;
+  el("label-goal").textContent = mode.labels.goal;
+
+  // プレースホルダー（例文）
+  if (mode.placeholders) {
+    if (mode.placeholders.summary) {
+      summaryInput.placeholder = mode.placeholders.summary;
+    }
+    if (mode.placeholders.details) {
+      detailsInput.placeholder = mode.placeholders.details;
+    }
+    if (mode.placeholders.actions) {
+      actionsInput.placeholder = mode.placeholders.actions;
+    }
+    if (mode.placeholders.goal) {
+      goalInput.placeholder = mode.placeholders.goal;
+    }
+  }
+
+  // ヒント文
+  const hints = mode.hints || {};
+  const setHint = (id, key) => {
+    const target = el(id);
+    if (!target) return;
+    target.textContent = hints[key] || "";
+  };
+
+  setHint("hint-userName", "userName");
+  setHint("hint-eventDateTime", "eventDateTime");
+  setHint("hint-eventPlace", "eventPlace");
+  setHint("hint-summary", "summary");
+  setHint("hint-details", "details");
+  setHint("hint-actions", "actions");
+  setHint("hint-goal", "goal");
+  setHint("hint-vital", "vital");
+  setHint("hint-concern", "concern");
+}
+
+// モード切替イベント
+modeSelect.addEventListener("change", () => {
+  applyMode(modeSelect.value);
+  // モード切替時にローカルスコアをリセット
+  localScoreValueEl.textContent = "—";
+  localScoreLevelEl.textContent = "未評価";
+  localScoreDetailEl.textContent =
+    "フォームに入力すると、自動的に不足している視点をお知らせします。";
+});
+
+// 初期表示
+applyMode(modeSelect.value);
 
 
 // ===== 日時フォーマット =====
