@@ -146,11 +146,119 @@ const MODE_CONFIG = {
   ]
 }
 
+// ===== モード定義 =====
+const MODE_CONFIG = {
+  // 共有・報告モード（現場 → 管理者・看護師）
+  report: {
+    name: "共有・報告モード",
+    description:
+      "事故・状態変化・ケアの変更・家族からの情報共有など、現場から管理者・看護師へ伝えたい内容をまとめるときに使います。",
+    labels: {
+      summary: "概要（ひとことで言うと？）",
+      details: "詳しい状況・経過",
+      actions: "実施した対応",
+      goal: "今後の対応・ゴール／報告ライン"
+    },
+    // 各項目に出す例文（placeholder）
+    placeholders: {
+      summary:
+        "例）本日、◯◯様について嘔吐がありました。食欲低下と倦怠感を認めています。",
+      details:
+        "例）直前の様子、きっかけ、起きたことの流れ、現在の状態などを時系列で記載します。",
+      actions:
+        "例）バイタル測定、ケア内容の変更、家族連絡、医師・看護師への報告 など",
+      goal:
+        "例）今後の観察ポイント（どんな変化があれば再連絡するか）、誰に報告するか を書きます。",
+      concern:
+        "例）いつもより会話が少なく、表情が乏しい印象あり。歩行時のふらつきが目立つ など"
+    },
+    // 各項目の補助文（例の下に出るテキスト）
+    hints: {
+      userName:
+        "利用者名はフルネームでなくても、施設内で誰か特定できる表現であればOKです。",
+      eventDateTime:
+        "発生時刻と発見時刻が違う場合は、本文中で区別して書けるとより正確です。",
+      eventPlace:
+        "フロア・部屋番号・どのあたりか（入口付近など）を書くと、再発防止に役立ちます。",
+      summary:
+        "「いつ・どこで・誰に・何が起きたか」を一文でまとめます。読む側が一瞬でイメージできることを目指します。",
+      details:
+        "状態変化・事故・家族からの情報・電話連絡など、どんなテーマでも使えます。直前の様子→起きたこと→その後の反応の順で書くと伝わりやすいです。",
+      actions:
+        "観察・処置・ケアの変更・家族連絡・医師や看護師への報告など、「いつ・誰が・何をしたか」を整理して書きます。",
+      goal:
+        "今後の観察ポイント（どのような変化があれば再連絡するか等）と、誰に報告してほしいかを書きます。",
+      vital:
+        "体温・血圧・脈拍・SpO2など、測定したものがあれば入力してください。未測定であれば空欄でOKです。",
+      concern:
+        "「なんとなく気になる」「いつもと違う」という感覚も、とても重要な情報です。言葉にして残しておきましょう。"
+    },
+    checks: [
+      { key: "summary", label: "概要", required: true },
+      { key: "details", label: "詳しい状況・経過", required: true },
+      { key: "actions", label: "実施した対応", required: true },
+      { key: "goal", label: "今後の対応・ゴール／報告ライン", required: false },
+      { key: "vital", label: "バイタル／数値情報", required: false }
+    ]
+  },
+
+  // 指示モード（管理者・看護師 → 現場職員）
+  instruction: {
+    name: "指示モード",
+    description:
+      "看護師・管理者・リーダーが、介護職員などに「誤解なく動いてほしい指示」を出すときに使います。",
+    labels: {
+      summary: "指示の概要（誰に／何についてしてほしいか）",
+      details: "背景・理由（なぜその指示が必要か）",
+      actions: "具体的な指示内容（いつ・誰が・どこで・何を・どの程度）",
+      goal: "完了条件・報告ライン"
+    },
+    placeholders: {
+      summary:
+        "例）日勤帯の介護職員へ：◯◯様の水分量チェックを本日中強化してほしい。",
+      details:
+        "例）最近の状態変化やリスク、医師からの指示、家族からの希望など、指示が必要になった背景を書きます。",
+      actions:
+        "例）① 9〜17時は2時間ごとに水分摂取量を記録する　② 食事ごとにむせ込みの有無を観察する　など、誰が・いつ・何をするかを具体的に。",
+      goal:
+        "例）3日間記録が取れて、むせ込みがないことを確認したら指示完了。異常があればその都度看護師へ報告、など。",
+      concern:
+        "例）現場として特に注意してほしいリスクや、気を付けてほしいポイントがあれば記載します。"
+    },
+    hints: {
+      userName:
+        "指示の対象となる利用者／対象者を記載します。複数いる場合は「◯◯様ほか◯名」などでもOKです。",
+      eventDateTime:
+        "いつからいつまで行ってほしい指示か、目安の期間が分かると動きやすくなります。",
+      eventPlace:
+        "どのフロア／どの時間帯の担当者が行う指示かが分かるように書けると親切です。",
+      summary:
+        "「誰に・何について・どうしてほしいか」を一文で書きます（例：日勤帯の介護職員へ、A様の水分量チェックの強化を依頼）。",
+      details:
+        "最近の状態変化やリスク、医師からの指示など、なぜその指示が必要なのかを書いてください。",
+      actions:
+        "“誰が・いつ・どのように・どのくらい”行うかが分かるように、箇条書きで具体的に書きます。",
+      goal:
+        "どの状態になったら指示完了と見なすか、どのタイミングで誰に報告してほしいかを明確にします。",
+      vital:
+        "指示に関係する数値（体温・血圧・食事量・水分量など）があれば記載すると、判断がしやすくなります。",
+      concern:
+        "現場で特に気になっているリスクや、注意してほしい点があればここに書くと、指示の背景が伝わりやすくなります。"
+    },
+    checks: [
+      { key: "summary", label: "指示の概要", required: true },
+      { key: "details", label: "背景・理由", required: true },
+      { key: "actions", label: "具体的な指示内容", required: true },
+      { key: "goal", label: "完了条件・報告ライン", required: true }
+    ]
+  }
+};
+
 // ===== モード反映 =====
 function applyMode(modeKey) {
   const mode = MODE_CONFIG[modeKey] ?? MODE_CONFIG.report;
 
-  // モード説明
+  // 上の説明文
   modeDescription.textContent = `現在は「${mode.name}」です。${mode.description}`;
 
   // ラベル
@@ -161,21 +269,16 @@ function applyMode(modeKey) {
 
   // プレースホルダー（例文）
   if (mode.placeholders) {
-    if (mode.placeholders.summary) {
-      summaryInput.placeholder = mode.placeholders.summary;
-    }
-    if (mode.placeholders.details) {
-      detailsInput.placeholder = mode.placeholders.details;
-    }
-    if (mode.placeholders.actions) {
-      actionsInput.placeholder = mode.placeholders.actions;
-    }
-    if (mode.placeholders.goal) {
-      goalInput.placeholder = mode.placeholders.goal;
+    summaryInput.placeholder = mode.placeholders.summary || "";
+    detailsInput.placeholder = mode.placeholders.details || "";
+    actionsInput.placeholder = mode.placeholders.actions || "";
+    goalInput.placeholder = mode.placeholders.goal || "";
+    if (mode.placeholders.concern) {
+      concernInput.placeholder = mode.placeholders.concern;
     }
   }
 
-  // ヒント文
+  // ヒント（下に出る補助文）
   const hints = mode.hints || {};
   const setHint = (id, key) => {
     const target = el(id);
@@ -206,7 +309,6 @@ modeSelect.addEventListener("change", () => {
 
 // 初期表示
 applyMode(modeSelect.value);
-
 
 // ===== 日時フォーマット =====
 function formatDateTime(value) {
