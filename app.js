@@ -47,112 +47,11 @@ const btnEvaluate = document.getElementById("btnEvaluate");
 
 // ===== モード定義 =====
 const MODE_CONFIG = {
-  // -------------------------
-  // 共有・報告モード
-  // -------------------------
- report: {
-  name: "共有・報告モード",
-  description:
-    "体調・行動・出来事・家族連絡・設備・持ち物など、現場のあらゆる共有に使えるモードです。",
-
-  labels: {
-    summary: "概要（ひとことで言うと？）",
-    details: "詳しい状況・経過（何があったのか？）",
-    actions: "実施した対応",
-    goal: "今後の対応・ゴール／報告ライン"
-  },
-
-  hints: {
-    userName: "利用者名はフルネームでなくとも、施設内で誰か特定できればOKです。",
-    eventDateTime: "発生時刻・発見時刻が異なる場合は、本文で区別して書くと正確です。",
-    eventPlace: "フロア・部屋番号・どのあたりか（入口付近など）を書くと理解がスムーズです。",
-
-    summary:
-      "「何が起きたのか？」を一文でまとめます。体調以外の共有（家族連絡・物品・出来事など）でもOK。",
-
-    details:
-      "“いつ・どこで・誰が・何に気づいたか” など、状況を分かる範囲で書きます。見た／聞いた／起きた事実だけで十分です。",
-
-    actions:
-      "声かけ・観察・測定・説明・連絡・処置など、実施した内容を簡潔に書きます。未実施の場合は空欄でOK。",
-
-    goal:
-      "次にどうするか（観察ポイント・注意点・報告の基準など）をシンプルに書きます。１つだけでもOK。",
-
-    vital:
-      "測定していない項目は空欄でOKです。入力がある項目のみ文章に反映されます。",
-
-    concern:
-      "「なんとなく気になる」「いつもと違う」という感覚的情報も共有すると役立ちます。短くてOKです。"
-  },
-
-  checks: [
-    { key: "summary", label: "概要", required: true },
-    { key: "details", label: "詳しい状況・経過", required: true },
-    { key: "actions", label: "実施した対応", required: false },
-    { key: "goal", label: "今後の対応・ゴール／報告ライン", required: false },
-    { key: "vital", label: "バイタル／数値情報", required: false }
-  ]
-}
-
-  // -------------------------
-  // 指示モード
-  // -------------------------
- instruction: {
-  name: "指示モード",
-  description:
-    "看護師・管理者・リーダーが、介護職員などに明確な指示を出すためのモードです。体調・生活面・ケア内容・家族対応など、どの事例にも使える汎用型の入力フォームです。",
-  
-  labels: {
-    summary: "何の指示か？（ひとことで）",
-    details: "背景・理由（なぜ必要か？）",
-    actions: "具体的な指示内容（誰が・いつ・どこで・何を・どの程度）",
-    goal: "完了条件・報告ライン"
-  },
-
-  hints: {
-    userName:
-      "指示の対象となる利用者・職員・場所を記載します（例：A様、フロア職員、夜勤者など）。",
-    eventDateTime:
-      "指示を実施してほしい期間・開始時刻・時間帯などが分かると動きやすいです。",
-    eventPlace:
-      "どのフロア・どの担当者が行う指示か分かるように書くと誤解が減ります。",
-    summary:
-      "指示の“主題”をひとことで。例：『B様の嘔吐後の観察強化』『A様の水分量チェック依頼』など。",
-    details:
-      "なぜ必要か？直近の状態変化・家族からの要望・医師の指示・環境要因などを簡潔に。",
-    actions:
-      "指示の中心部分。『誰が』『いつ』『どこで』『何を』『どの程度』を意識できると職員が迷いません。",
-    goal:
-      "どの状態になれば指示完了とみなすか、変化があれば誰に報告するかを書きます。",
-    vital:
-      "必要であれば、体温・血圧・摂取量・排泄量など指示に関連する数値を入力してください。",
-    concern:
-      "気になっている点（例：『表情乏しい』『返答が遅い』『食事量が落ちている』など）。判断の補助になります。"
-  },
-
-  // チェック項目（超シンプル）
-  checks: [
-    { key: "summary", label: "指示の概要", required: true },
-    { key: "details", label: "背景・理由", required: true },
-    {
-      key: "actions",
-      label: "具体的な指示内容（誰が・いつ・どこで・何を）",
-      required: true
-    },
-    { key: "goal", label: "完了条件・報告ライン", required: true },
-    { key: "vital", label: "バイタル／数値情報", required: false },
-    { key: "concern", label: "気になっている点", required: false }
-  ]
-}
-
-// ===== モード定義 =====
-const MODE_CONFIG = {
   // 共有・報告モード（現場 → 管理者・看護師）
   report: {
     name: "共有・報告モード",
     description:
-      "事故・状態変化・ケアの変更・家族からの情報共有など、現場から管理者・看護師へ伝えたい内容をまとめるときに使います。",
+      "事故・体調変化・ケアの変更・家族からの情報共有など、現場から管理者・看護師へ伝えたい内容をまとめるときに使います。",
     labels: {
       summary: "概要（ひとことで言うと？）",
       details: "詳しい状況・経過",
@@ -206,7 +105,7 @@ const MODE_CONFIG = {
   instruction: {
     name: "指示モード",
     description:
-      "看護師・管理者・リーダーが、介護職員などに「誤解なく動いてほしい指示」を出すときに使います。",
+      "看護師・管理者・リーダーが、介護職員などに「誤解なく動いてほしい指示」を出すときに使います。体調・生活面・ケア内容・家族対応など、どの事例にも使える汎用型です。",
     labels: {
       summary: "指示の概要（誰に／何についてしてほしいか）",
       details: "背景・理由（なぜその指示が必要か）",
@@ -237,7 +136,7 @@ const MODE_CONFIG = {
       details:
         "最近の状態変化やリスク、医師からの指示など、なぜその指示が必要なのかを書いてください。",
       actions:
-        "“誰が・いつ・どのように・どのくらい”行うかが分かるように、箇条書きで具体的に書きます。",
+        "“誰が・いつ・どのように・どのくらい” 行うかが分かるように、箇条書きで具体的に書きます。",
       goal:
         "どの状態になったら指示完了と見なすか、どのタイミングで誰に報告してほしいかを明確にします。",
       vital:
@@ -267,13 +166,28 @@ function applyMode(modeKey) {
   el("label-actions").textContent = mode.labels.actions;
   el("label-goal").textContent = mode.labels.goal;
 
-  // プレースホルダー（例文）
+  // プレースホルダー（例文）を一度クリア
+  if (summaryInput) summaryInput.placeholder = "";
+  if (detailsInput) detailsInput.placeholder = "";
+  if (actionsInput) actionsInput.placeholder = "";
+  if (goalInput) goalInput.placeholder = "";
+  if (concernInput) concernInput.placeholder = "";
+
+  // プレースホルダー設定
   if (mode.placeholders) {
-    summaryInput.placeholder = mode.placeholders.summary || "";
-    detailsInput.placeholder = mode.placeholders.details || "";
-    actionsInput.placeholder = mode.placeholders.actions || "";
-    goalInput.placeholder = mode.placeholders.goal || "";
-    if (mode.placeholders.concern) {
+    if (summaryInput && mode.placeholders.summary) {
+      summaryInput.placeholder = mode.placeholders.summary;
+    }
+    if (detailsInput && mode.placeholders.details) {
+      detailsInput.placeholder = mode.placeholders.details;
+    }
+    if (actionsInput && mode.placeholders.actions) {
+      actionsInput.placeholder = mode.placeholders.actions;
+    }
+    if (goalInput && mode.placeholders.goal) {
+      goalInput.placeholder = mode.placeholders.goal;
+    }
+    if (concernInput && mode.placeholders.concern) {
       concernInput.placeholder = mode.placeholders.concern;
     }
   }
@@ -338,44 +252,6 @@ function buildVital() {
   if (spo2) parts.push(`SpO2 ${spo2}％`);
 
   return parts.join("、");
-}
-// ===== モード反映 =====
-function applyMode(modeKey) {
-  const mode = MODE_CONFIG[modeKey] ?? MODE_CONFIG.report;
-
-  modeDescription.textContent = `現在は「${mode.name}」です。${mode.description}`;
-
-  // ラベル
-  el("label-summary").textContent = mode.labels.summary;
-  el("label-details").textContent = mode.labels.details;
-  el("label-actions").textContent = mode.labels.actions;
-  el("label-goal").textContent = mode.labels.goal;
-
-  // ヒント
-  const hints = mode.hints || {};
-  const setHint = (id, key) => {
-    const target = el(id);
-    if (!target) return;
-    target.textContent = hints[key] || "";
-  };
-
-  setHint("hint-userName", "userName");
-  setHint("hint-eventDateTime", "eventDateTime");
-  setHint("hint-eventPlace", "eventPlace");
-  setHint("hint-summary", "summary");
-  setHint("hint-details", "details");
-  setHint("hint-actions", "actions");
-  setHint("hint-goal", "goal");
-  setHint("hint-vital", "vital");
-  setHint("hint-concern", "concern"); // ← 新規追加
-
-  // プレースホルダ切り替え（例文）
-  if (mode.placeholders) {
-    summaryInput.placeholder = mode.placeholders.summary || "";
-    detailsInput.placeholder = mode.placeholders.details || "";
-    actionsInput.placeholder = mode.placeholders.actions || "";
-    goalInput.placeholder = mode.placeholders.goal || "";
-  }
 }
 
 // ===== 報告／指示文生成 =====
@@ -690,4 +566,3 @@ if (btnApplyRewrite && aiRewriteText) {
     });
   });
 }
-
