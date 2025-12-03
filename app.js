@@ -1,36 +1,41 @@
-// ===== 設定 =====
-const API_ENDPOINT = "/api/evaluate-report";
-
-// ===== DOM取得 =====
+/* -------------------------------------------------------
+   DOM Utility
+------------------------------------------------------- */
 const el = (id) => document.getElementById(id);
 
+/* -------------------------------------------------------
+   DOM Elements
+------------------------------------------------------- */
+// Mode
 const modeSelect = el("modeSelect");
 const modeDescription = el("modeDescription");
 
+// Inputs
 const reporterNameInput = el("reporterName");
 const userNameInput = el("userName");
 const eventDateTimeInput = el("eventDateTime");
 const eventPlaceInput = el("eventPlace");
+
 const summaryInput = el("summary");
 const detailsInput = el("details");
 const actionsInput = el("actions");
 const goalInput = el("goal");
-const concernInput = el("concern");
 
-// 新カード関連
-const aiRewriteCard = document.getElementById("aiRewriteCard");
-const aiRewriteText = document.getElementById("aiRewriteText");
-const btnCopyRewrite = document.getElementById("btnCopyRewrite");
-const btnApplyRewrite = document.getElementById("btnApplyRewrite");
-
-// バイタル用
 const tempInput = el("tempInput");
 const bpSysInput = el("bpSysInput");
 const bpDiaInput = el("bpDiaInput");
 const pulseInput = el("pulseInput");
 const spo2Input = el("spo2Input");
 
+const concernInput = el("concern");
+
+const quickBulletsInput = el("quickBullets");
+const btnQuickGenerate = el("btnQuickGenerate");
+const quickTagButtons = document.querySelectorAll(".quick-tag");
+
+// Output areas
 const generatedReportEl = el("generatedReport");
+
 const localScoreValueEl = el("localScoreValue");
 const localScoreLevelEl = el("localScoreLevel");
 const localScoreDetailEl = el("localScoreDetail");
@@ -39,530 +44,554 @@ const aiScoreValueEl = el("aiScoreValue");
 const aiFeedbackEl = el("aiFeedback");
 const aiRewriteEl = el("aiRewrite");
 
+const aiRewriteCard = el("aiRewriteCard");
+const aiRewriteText = el("aiRewriteText");
+
+const aiShortCard = el("aiShortCard");
+const aiShortText = el("aiShortText");
+
+// Buttons
+const btnGenerate = el("btnGenerate");
+const btnEvaluate = el("btnEvaluate");
+const btnCopyRewrite = el("btnCopyRewrite");
+const btnApplyRewrite = el("btnApplyRewrite");
+const btnCopyShort = el("btnCopyShort");
+
+// Error
 const errorMessageEl = el("errorMessage");
 
-// ボタン
-const btnGenerate = document.getElementById("btnGenerate");
-const btnEvaluate = document.getElementById("btnEvaluate");
+/* -------------------------------------------------------
+   State
+------------------------------------------------------- */
+let currentInputMode = "normal";
 
-// ===== モード定義 =====
+/* -------------------------------------------------------
+   Mode Configuration
+------------------------------------------------------- */
 const MODE_CONFIG = {
-  // 共有・報告モード（現場 → 管理者・看護師）
   report: {
     name: "共有・報告モード",
     description:
-      "事故・体調変化・ケアの変更・家族からの情報共有など、現場から管理者・看護師へ伝えたい内容をまとめるときに使います。",
+      "利用者の事故・状態変化・家族連絡などを、管理者や看護師に正確に伝える報告文を作成します。",
     labels: {
       summary: "概要（ひとことで言うと？）",
       details: "詳しい状況・経過",
       actions: "実施した対応",
-      goal: "今後の対応・ゴール／報告ライン"
+      goal: "今後の対応・ゴール",
     },
-    // 各項目に出す例文（placeholder）
     placeholders: {
-      summary:
-        "例）本日、◯◯様について嘔吐がありました。食欲低下と倦怠感を認めています。",
+      summary: "例）転倒はなかったが、ふらつきが強く危険を感じた。",
       details:
-        "例）直前の様子、きっかけ、起きたことの流れ、現在の状態などを時系列で記載します。",
+        "例）直前の様子 → 起きたこと → その後の反応\n時系列で書くと分かりやすくなります。",
       actions:
-        "例）バイタル測定、ケア内容の変更、家族連絡、医師・看護師への報告 など",
-      goal:
-        "例）今後の観察ポイント（どんな変化があれば再連絡するか）、誰に報告するか を書きます。",
-      concern:
-        "例）いつもより会話が少なく、表情が乏しい印象あり。歩行時のふらつきが目立つ など"
+        "例）バイタル測定、患部確認、飲水介助、家族・主治医への連絡など。",
+      goal: "例）今後観察すべき点、どこに報告するか。",
     },
-    // 各項目の補助文（例の下に出るテキスト）
     hints: {
-      userName:
-        "利用者名はフルネームでなくても、施設内で誰か特定できる表現であればOKです。",
-      eventDateTime:
-        "発生時刻と発見時刻が違う場合は、本文中で区別して書けるとより正確です。",
-      eventPlace:
-        "フロア・部屋番号・どのあたりか（入口付近など）を書くと、再発防止に役立ちます。",
-      summary:
-        "「いつ・どこで・誰に・何が起きたか」を一文でまとめます。読む側が一瞬でイメージできることを目指します。",
+      summary: "まず「何があったか」を簡潔にまとめてください。",
       details:
-        "状態変化・事故・家族からの情報・電話連絡など、どんなテーマでも使えます。直前の様子→起きたこと→その後の反応の順で書くと伝わりやすいです。",
+        "直前の様子、起きたこと、その後の様子の順で書くと分かりやすいです。",
       actions:
-        "観察・処置・ケアの変更・家族連絡・医師や看護師への報告など、「いつ・誰が・何をしたか」を整理して書きます。",
-      goal:
-        "今後の観察ポイント（どのような変化があれば再連絡するか等）と、誰に報告してほしいかを書きます。",
-      vital:
-        "体温・血圧・脈拍・SpO2など、測定したものがあれば入力してください。未測定であれば空欄でOKです。",
-      concern:
-        "「なんとなく気になる」「いつもと違う」という感覚も、とても重要な情報です。言葉にして残しておきましょう。"
+        "行った対応、申し送りたい内容などを具体的に書いてください。",
+      goal: "誰が、どこまでやれば完了なのかを書いてください。",
+      userName: "対象者が特定できるように記載してください。",
+      eventDateTime: "起きた時間、気づいた時間を記載してください。",
+      eventPlace: "施設内のどの場所で起きたかを書いてください。",
+      vital: "数値がなければ空欄でもかまいません。",
+      concern: "「なんとなく違う」と感じたことも重要な情報です。",
     },
-    checks: [
-      { key: "summary", label: "概要", required: true },
-      { key: "details", label: "詳しい状況・経過", required: true },
-      { key: "actions", label: "実施した対応", required: true },
-      { key: "goal", label: "今後の対応・ゴール／報告ライン", required: false },
-      { key: "vital", label: "バイタル／数値情報", required: false }
-    ]
+    checks: {
+      summary: { required: true, label: "概要" },
+      details: { required: true, label: "詳しい状況" },
+      actions: { required: false, label: "実施した対応" },
+      goal: { required: false, label: "今後の対応" },
+      vital: { required: false, label: "バイタル" },
+      concern: { required: false, label: "違和感" },
+    },
   },
 
-  // 指示モード（管理者・看護師 → 現場職員）
   instruction: {
     name: "指示モード",
     description:
-      "看護師・管理者・リーダーが、介護職員などに「誤解なく動いてほしい指示」を出すときに使います。体調・生活面・ケア内容・家族対応など、どの事例にも使える汎用型です。",
+      "看護師・管理者・リーダーが、現場職員に誤解なく伝わる指示文を作成します。",
     labels: {
-      summary: "指示の概要（誰に／何についてしてほしいか）",
-      details: "背景・理由（なぜその指示が必要か）",
-      actions: "具体的な指示内容（いつ・誰が・どこで・何を・どの程度）",
-      goal: "完了条件・報告ライン"
+      summary: "指示の概要",
+      details: "背景・理由",
+      actions: "具体的な指示内容",
+      goal: "完了条件・報告ライン",
     },
     placeholders: {
-      summary:
-        "例）日勤帯の介護職員へ：◯◯様の水分量チェックを本日中強化してほしい。",
+      summary: "例）◯◯様の水分量を本日からこまめにチェックしてください。",
       details:
-        "例）最近の状態変化やリスク、医師からの指示、家族からの希望など、指示が必要になった背景を書きます。",
+        "例）最近脱水傾向が見られるため、本日の摂取量を把握したい。",
       actions:
-        "例）① 9〜17時は2時間ごとに水分摂取量を記録する　② 食事ごとにむせ込みの有無を観察する　など、誰が・いつ・何をするかを具体的に。",
-      goal:
-        "例）3日間記録が取れて、むせ込みがないことを確認したら指示完了。異常があればその都度看護師へ報告、など。",
-      concern:
-        "例）現場として特に注意してほしいリスクや、気を付けてほしいポイントがあれば記載します。"
+        "例）1時間ごとに記録、状態変化があればすぐ報告、夜勤へ申し送り。",
+      goal: "例）夕食後までに3回以上確認し、21時までに管理者へ報告。",
     },
     hints: {
-      userName:
-        "指示の対象となる利用者／対象者を記載します。複数いる場合は「◯◯様ほか◯名」などでもOKです。",
-      eventDateTime:
-        "いつからいつまで行ってほしい指示か、目安の期間が分かると動きやすくなります。",
-      eventPlace:
-        "どのフロア／どの時間帯の担当者が行う指示かが分かるように書けると親切です。",
-      summary:
-        "「誰に・何について・どうしてほしいか」を一文で書きます（例：日勤帯の介護職員へ、A様の水分量チェックの強化を依頼）。",
-      details:
-        "最近の状態変化やリスク、医師からの指示など、なぜその指示が必要なのかを書いてください。",
+      summary: "何の指示なのかを一文で記載してください。",
+      details: "なぜその指示が必要なのか、背景を書いてください。",
       actions:
-        "“誰が・いつ・どのように・どのくらい” 行うかが分かるように、箇条書きで具体的に書きます。",
-      goal:
-        "どの状態になったら指示完了と見なすか、どのタイミングで誰に報告してほしいかを明確にします。",
-      vital:
-        "指示に関係する数値（体温・血圧・食事量・水分量など）があれば記載すると、判断がしやすくなります。",
-      concern:
-        "現場で特に気になっているリスクや、注意してほしい点があればここに書くと、指示の背景が伝わりやすくなります。"
+        "誰が、何を、いつからいつまで行うのかを明確にしてください。",
+      goal: "どこまで行えば完了か、どこへ報告するかを書いてください。",
+      userName: "対象者が分かるよう記載してください。",
+      eventDateTime: "開始日時や期限があれば入れてください。",
+      eventPlace: "指示が必要なフロアや場所があれば記載してください。",
+      vital: "必要な場合のみ記入",
+      concern: "気になる点があれば書いてください。",
     },
-    checks: [
-      { key: "summary", label: "指示の概要", required: true },
-      { key: "details", label: "背景・理由", required: true },
-      { key: "actions", label: "具体的な指示内容", required: true },
-      { key: "goal", label: "完了条件・報告ライン", required: true }
-    ]
-  }
+    checks: {
+      summary: { required: true, label: "指示の概要" },
+      details: { required: true, label: "背景・理由" },
+      actions: { required: true, label: "具体的な指示内容" },
+      goal: { required: true, label: "完了条件" },
+    },
+  },
 };
 
-// ===== モード反映 =====
+/* -------------------------------------------------------
+   Apply Mode (UI変更)
+------------------------------------------------------- */
 function applyMode(modeKey) {
-  const mode = MODE_CONFIG[modeKey] ?? MODE_CONFIG.report;
+  const mode = MODE_CONFIG[modeKey];
 
-  // 上の説明文
-  modeDescription.textContent = `現在は「${mode.name}」です。${mode.description}`;
+  modeDescription.textContent = mode.description;
 
-  // ラベル
+  // Labels
   el("label-summary").textContent = mode.labels.summary;
   el("label-details").textContent = mode.labels.details;
   el("label-actions").textContent = mode.labels.actions;
   el("label-goal").textContent = mode.labels.goal;
 
-  // プレースホルダー（例文）を一度クリア
-  if (summaryInput) summaryInput.placeholder = "";
-  if (detailsInput) detailsInput.placeholder = "";
-  if (actionsInput) actionsInput.placeholder = "";
-  if (goalInput) goalInput.placeholder = "";
-  if (concernInput) concernInput.placeholder = "";
+  // Placeholders
+  summaryInput.placeholder = mode.placeholders.summary;
+  detailsInput.placeholder = mode.placeholders.details;
+  actionsInput.placeholder = mode.placeholders.actions;
+  goalInput.placeholder = mode.placeholders.goal;
 
-  // プレースホルダー設定
-  if (mode.placeholders) {
-    if (summaryInput && mode.placeholders.summary) {
-      summaryInput.placeholder = mode.placeholders.summary;
-    }
-    if (detailsInput && mode.placeholders.details) {
-      detailsInput.placeholder = mode.placeholders.details;
-    }
-    if (actionsInput && mode.placeholders.actions) {
-      actionsInput.placeholder = mode.placeholders.actions;
-    }
-    if (goalInput && mode.placeholders.goal) {
-      goalInput.placeholder = mode.placeholders.goal;
-    }
-    if (concernInput && mode.placeholders.concern) {
-      concernInput.placeholder = mode.placeholders.concern;
-    }
-  }
+  // Hints
+  el("hint-summary").textContent = mode.hints.summary;
+  el("hint-details").textContent = mode.hints.details;
+  el("hint-actions").textContent = mode.hints.actions;
+  el("hint-goal").textContent = mode.hints.goal;
+  el("hint-userName").textContent = mode.hints.userName;
+  el("hint-eventDateTime").textContent = mode.hints.eventDateTime;
+  el("hint-eventPlace").textContent = mode.hints.eventPlace;
+  el("hint-vital").textContent = mode.hints.vital;
+  el("hint-concern").textContent = mode.hints.concern;
 
-  // ヒント（下に出る補助文）
-  const hints = mode.hints || {};
-  const setHint = (id, key) => {
-    const target = el(id);
-    if (!target) return;
-    target.textContent = hints[key] || "";
-  };
-
-  setHint("hint-userName", "userName");
-  setHint("hint-eventDateTime", "eventDateTime");
-  setHint("hint-eventPlace", "eventPlace");
-  setHint("hint-summary", "summary");
-  setHint("hint-details", "details");
-  setHint("hint-actions", "actions");
-  setHint("hint-goal", "goal");
-  setHint("hint-vital", "vital");
-  setHint("hint-concern", "concern");
+  // Reset score + outputs
+  resetOutputs();
 }
 
-// モード切替イベント
-modeSelect.addEventListener("change", () => {
-  applyMode(modeSelect.value);
-  // モード切替時にローカルスコアをリセット
-  localScoreValueEl.textContent = "—";
-  localScoreLevelEl.textContent = "未評価";
-  localScoreDetailEl.textContent =
-    "フォームに入力すると、自動的に不足している視点をお知らせします。";
-});
+/* -------------------------------------------------------
+   Reset outputs
+------------------------------------------------------- */
+function resetOutputs() {
+  localScoreValueEl.textContent = "-";
+  localScoreDetailEl.textContent = "";
+  localScoreLevelEl.textContent = "まだ評価が行われていません。";
 
-// 初期表示
-applyMode(modeSelect.value);
+  aiScoreValueEl.textContent = "-";
+  aiFeedbackEl.innerHTML = "";
 
-// ===== 日時フォーマット =====
-function formatDateTime(value) {
-  if (!value) return "";
-  const d = new Date(value);
-  if (isNaN(d.getTime())) return value;
-  const y = d.getFullYear();
-  const m = `${d.getMonth() + 1}`.padStart(2, "0");
-  const day = `${d.getDate()}`.padStart(2, "0");
-  const hh = `${d.getHours()}`.padStart(2, "0");
-  const mm = `${d.getMinutes()}`.padStart(2, "0");
-  return `${y}年${m}月${day}日 ${hh}時${mm}分頃`;
+  aiRewriteEl.textContent = "";
+  aiRewriteText.value = "";
+  aiRewriteCard.style.display = "none";
+
+  aiShortCard.style.display = "none";
+  aiShortText.value = "";
+
+  generatedReportEl.textContent = "";
+
+  errorMessageEl.style.display = "none";
+  errorMessageEl.textContent = "";
 }
 
-// ===== バイタル文字列作成 =====
+/* -------------------------------------------------------
+   Vital builder
+------------------------------------------------------- */
 function buildVital() {
-  const t = tempInput.value;
-  const sys = bpSysInput.value;
-  const dia = bpDiaInput.value;
-  const pulse = pulseInput.value;
-  const spo2 = spo2Input.value;
-
   const parts = [];
-  if (t) parts.push(`BT ${t}℃`);
-  if (sys && dia) parts.push(`BP ${sys}/${dia}`);
-  if (pulse) parts.push(`P ${pulse}`);
-  if (spo2) parts.push(`SpO2 ${spo2}％`);
+  if (tempInput.value) parts.push(`BT ${tempInput.value}℃`);
+  if (bpSysInput.value && bpDiaInput.value)
+    parts.push(`BP ${bpSysInput.value}/${bpDiaInput.value}`);
+  if (pulseInput.value) parts.push(`P ${pulseInput.value}`);
+  if (spo2Input.value) parts.push(`SpO2 ${spo2Input.value}%`);
 
   return parts.join("、");
 }
 
-// ===== 報告／指示文生成 =====
+/* -------------------------------------------------------
+   Build Report (通常モード)
+------------------------------------------------------- */
 function buildReport(modeKey) {
-  const mode = MODE_CONFIG[modeKey] ?? MODE_CONFIG.report;
+  const mode = MODE_CONFIG[modeKey];
 
-  const reporter = reporterNameInput.value.trim();
-  const user = userNameInput.value.trim();
-  const dt = eventDateTimeInput.value;
+  let text = "";
+
+  text += `【モード】${mode.name}\n\n`;
+  text += `■ 概要\n・${summaryInput.value.trim() || "（未入力）"}\n\n`;
+  text += `■ 基本情報\n`;
+  text += `・対象：${userNameInput.value.trim() || "（未入力）"}\n`;
+  text += `・日時：${eventDateTimeInput.value.trim() || "（未入力）"}\n`;
+  text += `・場所：${eventPlaceInput.value.trim() || "（未入力）"}\n\n`;
+
+  text += `■ 詳しい状況・経過\n・${detailsInput.value.trim() || "（未入力）"}\n\n`;
+
+  const vitalText = buildVital();
+  text += `■ バイタル／数値情報\n・${vitalText || "（未入力）"}\n\n`;
+
+  text += `■ ${mode.labels.actions}\n・${actionsInput.value.trim() || "（未入力）"}\n\n`;
+  text += `■ ${mode.labels.goal}\n・${goalInput.value.trim() || "（未入力）"}\n\n`;
+
+  text += `■ 職員として感じた違和感\n・${concernInput.value.trim() || "（未入力）"}\n\n`;
+
+  text += `■ 作成者\n・${reporterNameInput.value.trim() || "（未入力）"}\n`;
+
+  return text;
+}
+
+/* -------------------------------------------------------
+   Quick Tags
+------------------------------------------------------- */
+quickTagButtons.forEach((btn) => {
+  btn.addEventListener("click", () => {
+    btn.classList.toggle("is-selected");
+  });
+});
+
+function getSelectedQuickTags() {
+  return Array.from(quickTagButtons)
+    .filter((btn) => btn.classList.contains("is-selected"))
+    .map((btn) => btn.dataset.tag);
+}
+
+/* -------------------------------------------------------
+   Build Report from Quick Input
+------------------------------------------------------- */
+function buildReportFromQuick(modeKey) {
+  const mode = MODE_CONFIG[modeKey];
+  const bulletsRaw = quickBulletsInput.value.trim();
+
+  if (!bulletsRaw) throw new Error("要点メモ（3〜5行）を入力してください。");
+
+  const bullets = bulletsRaw
+    .split("\n")
+    .map((line) => line.replace(/^・/, "").trim())
+    .filter((line) => line.length > 0);
+
+  if (bullets.length === 0) throw new Error("要点メモに有効な行がありません。");
+
+  const tags = getSelectedQuickTags();
+
+  const targetUser = userNameInput.value.trim();
+  const eventDateTime = eventDateTimeInput.value.trim();
   const place = eventPlaceInput.value.trim();
-  const summary = summaryInput.value.trim();
-  const details = detailsInput.value.trim();
-  const actions = actionsInput.value.trim();
-  const goal = goalInput.value.trim();
-  const vital = buildVital();
-  const concern = concernInput.value.trim();
 
-  const rows = [];
+  let text = "";
+  text += `【モード】${mode.name}（かんたん入力から自動構成）\n\n`;
 
-  // ヘッダー
-  rows.push(`【モード】${mode.name}`);
-
-  // 概要
-  if (summary) {
-    rows.push(`\n■ ${mode.labels.summary}\n・${summary}`);
+  if (tags.length > 0) {
+    text += `■ カテゴリ・目的\n`;
+    text += `・${tags.join("／")}\n\n`;
   }
 
-  // 基本情報
-  if (user || dt || place) {
-    rows.push("\n■ 基本情報");
-    if (user) rows.push(`・対象：${user}`);
-    if (dt) rows.push(`・日時：${formatDateTime(dt)}`);
-    if (place) rows.push(`・場所：${place}`);
+  text += `■ 要点メモ（職員入力）\n`;
+  bullets.forEach((b) => {
+    text += `・${b}\n`;
+  });
+  text += "\n";
+
+  text += "■ 参考情報（入力がある場合のみ使用）\n";
+  if (targetUser) text += `・対象者：${targetUser}\n`;
+  if (eventDateTime) text += `・日時：${eventDateTime}\n`;
+  if (place) text += `・場所：${place}\n`;
+  if (!targetUser && !eventDateTime && !place) {
+    text += "・（対象者・日時・場所は未入力）\n";
   }
 
-  // 詳細
-  if (details) {
-    rows.push(`\n■ ${mode.labels.details}\n・${details}`);
-  }
+  text +=
+    "\n※この情報をもとに、管理者・看護師が読んで誤解なく伝わる文章に再構成してください。\n";
 
-  // バイタル
-  if (vital) {
-    rows.push(`\n■ バイタル／数値情報\n・${vital}`);
-  }
-
-  // 対応／指示内容
-  if (actions) {
-    rows.push(`\n■ ${mode.labels.actions}\n・${actions}`);
-  }
-
-  // 今後の対応／完了条件
-  if (goal) {
-    rows.push(`\n■ ${mode.labels.goal}\n・${goal}`);
-  }
-
-  // 違和感
-  if (concern) {
-    rows.push("\n■ 職員として感じた違和感・注意してほしい点\n・" + concern);
-  }
-
-  // 作成者
-  if (reporter) {
-    rows.push(`\n■ 作成者\n・${reporter}`);
-  }
-
-  return rows.join("\n");
+  return text;
 }
 
-// ===== ローカルスコア =====
+/* -------------------------------------------------------
+   Local Score
+------------------------------------------------------- */
 function evaluateLocal(modeKey) {
-  const mode = MODE_CONFIG[modeKey] ?? MODE_CONFIG.report;
-  const checks = mode.checks || [];
+  const mode = MODE_CONFIG[modeKey];
 
-  const values = {
-    summary: summaryInput.value.trim(),
-    details: detailsInput.value.trim(),
-    actions: actionsInput.value.trim(),
-    goal: goalInput.value.trim(),
-    vital: buildVital()
-  };
+  if (currentInputMode === "quick") {
+    let score = 80;
+    const missingRequired = [];
+    const missingOptional = [];
 
-  let missingRequired = [];
-  let missingOptional = [];
-
-  for (const c of checks) {
-    const v = (values[c.key] || "").trim();
-    if (!v) {
-      if (c.required) {
-        missingRequired.push(c.label);
-      } else {
-        missingOptional.push(c.label);
-      }
+    if (
+      !summaryInput.value.trim() &&
+      !quickBulletsInput.value.trim()
+    ) {
+      missingRequired.push("概要／要点");
+      score -= 20;
     }
+
+    if (userNameInput.value.trim()) score += 5;
+    if (eventDateTimeInput.value.trim()) score += 5;
+
+    if (score > 100) score = 100;
+
+    localScoreValueEl.textContent = score;
+
+    let level = "";
+    if (score >= 90) level = "ほぼ完成レベル（クイック）";
+    else if (score >= 75) level = "忙しいときの報告として十分";
+    else if (score >= 60) level = "要点は伝わるが、もう少し補足すると◎";
+    else level = "重要な情報が不足している可能性あり";
+
+    localScoreLevelEl.textContent = level;
+
+    const list = [];
+    if (missingRequired.length > 0)
+      list.push("【必須】" + missingRequired.join("／"));
+    if (missingOptional.length > 0)
+      list.push("【追加すると良い】" + missingOptional.join("／"));
+
+    localScoreDetailEl.textContent = list.join("\n");
+
+    return { score, missingRequired, missingOptional };
   }
 
+  // 通常モード
   let score = 100;
-  score -= missingRequired.length * 20;
-  score -= missingOptional.length * 8;
-  if (score < 20) score = 20;
+  const missingRequired = [];
+  const missingOptional = [];
+
+  const checks = mode.checks || {};
+
+  Object.entries(checks).forEach(([key, cfg]) => {
+    let value = "";
+
+    switch (key) {
+      case "summary":
+        value = summaryInput.value.trim();
+        break;
+      case "details":
+        value = detailsInput.value.trim();
+        break;
+      case "actions":
+        value = actionsInput.value.trim();
+        break;
+      case "goal":
+        value = goalInput.value.trim();
+        break;
+      case "vital":
+        value =
+          tempInput.value.trim() ||
+          bpSysInput.value.trim() ||
+          bpDiaInput.value.trim() ||
+          pulseInput.value.trim() ||
+          spo2Input.value.trim();
+        break;
+      case "concern":
+        value = concernInput.value.trim();
+        break;
+    }
+
+    if (!value) {
+      if (cfg.required) {
+        missingRequired.push(cfg.label);
+        score -= 20;
+      } else {
+        missingOptional.push(cfg.label);
+        score -= 8;
+      }
+    }
+  });
+
   if (score > 100) score = 100;
+  if (score < 20) score = 20;
 
-  const levelLabel =
-    score >= 90
-      ? "ほぼ完成レベル"
-      : score >= 75
-      ? "管理者が安心できるレベル"
-      : score >= 60
-      ? "大枠OK。もう一歩深掘りしたい"
-      : "重要な情報が不足している可能性あり";
+  localScoreValueEl.textContent = score;
 
-  localScoreValueEl.textContent = `${score}`;
-  localScoreLevelEl.textContent = levelLabel;
+  let level = "";
+  if (score >= 90) level = "ほぼ完成レベル";
+  else if (score >= 75) level = "管理者が安心できるレベル";
+  else if (score >= 60) level = "大枠OK。もう一歩深掘りしたい";
+  else level = "重要な情報が不足している可能性あり";
 
-  const messages = [];
-  if (missingRequired.length) {
-    messages.push(
-      `【必ず書いておきたい項目】\n- ${missingRequired.join("\n- ")}`
-    );
-  }
-  if (missingOptional.length) {
-    messages.push(
-      `【あるとより良い項目】\n- ${missingOptional.join("\n- ")}`
-    );
-  }
-  localScoreDetailEl.textContent =
-    messages.length > 0
-      ? messages.join("\n\n")
-      : "大きな抜けはありません。AIフィードバックで最終チェックを行いましょう。";
+  localScoreLevelEl.textContent = level;
 
-  return {
-    score,
-    missingRequired,
-    missingOptional
-  };
+  const list = [];
+  if (missingRequired.length > 0)
+    list.push("【必須】" + missingRequired.join("／"));
+  if (missingOptional.length > 0)
+    list.push("【追加すると良い】" + missingOptional.join("／"));
+
+  localScoreDetailEl.textContent = list.join("\n");
+
+  return { score, missingRequired, missingOptional };
 }
 
-// ===== エラー表示 =====
-function showError(message) {
-  errorMessageEl.textContent = message;
-  errorMessageEl.style.display = "block";
-}
-
-function clearError() {
-  errorMessageEl.textContent = "";
-  errorMessageEl.style.display = "none";
-}
-
-// ===== AI呼び出し =====
+/* -------------------------------------------------------
+   AI Evaluation
+------------------------------------------------------- */
 async function callAiEvaluate(payload) {
-  const res = await fetch(API_ENDPOINT, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify(payload)
-  });
-
-  // いったん JSON を取る（エラー時もメッセージを取りたい）
-  let data = null;
   try {
-    data = await res.json();
-  } catch (e) {
-    // JSON で返ってこなかった場合はそのまま
-  }
+    errorMessageEl.style.display = "none";
+    errorMessageEl.textContent = "";
 
-  if (!res.ok) {
-    const message =
-      (data && (data.errorMessage || data.error)) ||
-      `AI評価APIでエラーが発生しました（${res.status}）`;
-    throw new Error(message);
-  }
+    const res = await fetch("/api/evaluate-report", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
 
-  return data;
-}
+    const data = await res.json();
 
-// ===== ① AI用の文章を作る =====
-if (btnGenerate) {
-  btnGenerate.addEventListener("click", (e) => {
-    e.preventDefault();
-    clearError();
+    if (!res.ok) {
+      throw new Error(data.error || "AI応答でエラーが発生しました。");
+    }
 
-    const modeKey = modeSelect.value;
-    const reportText = buildReport(modeKey);
+    const { aiScore, feedbackText, rewriteText, shortText } = data;
 
-    // 黒枠に反映
-    generatedReportEl.textContent = reportText;
+    aiScoreValueEl.textContent = aiScore != null ? aiScore : "-";
 
-    // ローカルスコア更新
-    evaluateLocal(modeKey);
-
-    // AI結果リセット
-    aiScoreValueEl.textContent = "—";
     aiFeedbackEl.innerHTML = "";
-    aiRewriteEl.textContent = "";
+    (feedbackText || "")
+      .split(/\n{2,}/)
+      .map((b) => b.trim())
+      .filter((b) => b.length > 0)
+      .forEach((b) => {
+        const p = document.createElement("p");
+        p.textContent = b;
+        aiFeedbackEl.appendChild(p);
+      });
 
-    if (aiRewriteCard && aiRewriteText) {
+    aiRewriteEl.textContent = rewriteText || "";
+    if (rewriteText) {
+      aiRewriteCard.style.display = "block";
+      aiRewriteText.value = rewriteText;
+    } else {
       aiRewriteCard.style.display = "none";
       aiRewriteText.value = "";
     }
-  });
+
+    // 3行要約
+    if (shortText && shortText.trim()) {
+      aiShortCard.style.display = "block";
+      aiShortText.value = shortText.trim();
+    } else {
+      aiShortCard.style.display = "none";
+      aiShortText.value = "";
+    }
+  } catch (err) {
+    errorMessageEl.style.display = "block";
+    errorMessageEl.textContent = err.message;
+  }
 }
 
-// ===== ② 管理者チェック（AI評価） =====
-if (btnEvaluate) {
-  btnEvaluate.addEventListener("click", async (e) => {
-    e.preventDefault();
-    clearError();
+/* -------------------------------------------------------
+   Events
+------------------------------------------------------- */
 
-    const reportText = generatedReportEl.textContent.trim();
-    if (!reportText) {
-      showError("まず「① AI用の文章を作る」を押してから実行してください。");
-      return;
-    }
+/* モード切替 */
+modeSelect.addEventListener("change", () => {
+  currentInputMode = "normal";
+  applyMode(modeSelect.value);
+});
 
+/* 通常モード：AI用文章生成 */
+btnGenerate.addEventListener("click", () => {
+  try {
+    currentInputMode = "normal";
     const modeKey = modeSelect.value;
-    const localInfo = evaluateLocal(modeKey);
 
-    // ローディング表示
-    aiScoreValueEl.textContent = "…";
-    aiFeedbackEl.innerHTML = "<p>AIが内容を確認しています…</p>";
-    aiRewriteEl.textContent = "";
-
-    // 改善済み文章カードがあれば一旦隠す
-    if (aiRewriteCard && aiRewriteText) {
-      aiRewriteCard.style.display = "none";
-      aiRewriteText.value = "";
-    }
-
-    try {
-      const payload = {
-        mode: modeKey,
-        reportText,
-        localScore: localInfo.score,
-        missingRequired: localInfo.missingRequired,
-        missingOptional: localInfo.missingOptional
-      };
-
-      const data = await callAiEvaluate(payload);
-
-      const aiScore = data.aiScore ?? data.score ?? null;
-      const feedbackText = data.feedbackText ?? data.feedback ?? "";
-      const rewrite = data.rewriteText ?? data.rewrite ?? "";
-
-      // ① スコア表示
-      aiScoreValueEl.textContent = aiScore != null ? `${aiScore}` : "—";
-
-      // ② フィードバック（指摘・改善ポイント）
-      if (feedbackText) {
-        aiFeedbackEl.innerHTML = feedbackText
-          .split("\n")
-          .map((line) => `<p>${line}</p>`)
-          .join("");
-      } else {
-        aiFeedbackEl.innerHTML =
-          "<p>AIからのフィードバックは取得できませんでした。</p>";
-      }
-
-      // ③ 書き直し例 → 新しい改善済み文章エリアに反映
-      if (rewrite) {
-        aiRewriteEl.textContent = rewrite;
-
-        if (aiRewriteCard && aiRewriteText) {
-          aiRewriteCard.style.display = "block";
-          aiRewriteText.value = rewrite;
-        }
-      } else {
-        aiRewriteEl.textContent = "";
-        if (aiRewriteCard && aiRewriteText) {
-          aiRewriteCard.style.display = "none";
-          aiRewriteText.value = "";
-        }
-      }
-    } catch (err) {
-      console.error(err);
-      aiScoreValueEl.textContent = "—";
-      aiFeedbackEl.innerHTML = "";
-
-      if (aiRewriteCard && aiRewriteText) {
-        aiRewriteCard.style.display = "none";
-        aiRewriteText.value = "";
-      }
-
-      showError(err.message || "AI評価中にエラーが発生しました。");
-    }
-  });
-}
-
-// ===== 改善済み文章：コピー =====
-if (btnCopyRewrite && aiRewriteText) {
-  btnCopyRewrite.addEventListener("click", () => {
-    const text = aiRewriteText.value.trim();
-    if (!text) return;
-
-    navigator.clipboard.writeText(text).then(
-      () => alert("改善済みの文章をコピーしました。"),
-      () => alert("コピーに失敗しました。手動で選択してコピーしてください。")
-    );
-  });
-}
-
-// ===== 改善済み文章：AIに渡す文章（黒枠）に反映 =====
-if (btnApplyRewrite && aiRewriteText) {
-  btnApplyRewrite.addEventListener("click", () => {
-    const text = aiRewriteText.value.trim();
-    if (!text) return;
-
+    resetOutputs();
+    const text = buildReport(modeKey);
     generatedReportEl.textContent = text;
 
-    window.scrollTo({
-      top: 0,
-      behavior: "smooth"
+    evaluateLocal(modeKey);
+  } catch (err) {
+    errorMessageEl.style.display = "block";
+    errorMessageEl.textContent = err.message;
+  }
+});
+
+/* 通常モード：管理者チェック */
+btnEvaluate.addEventListener("click", () => {
+  try {
+    const modeKey = modeSelect.value;
+    const reportText = generatedReportEl.textContent.trim();
+    if (!reportText) throw new Error("先に「AI用の文章を作る」を押してください。");
+
+    const { score, missingRequired, missingOptional } = evaluateLocal(modeKey);
+
+    callAiEvaluate({
+      mode: modeKey,
+      reportText,
+      localScore: score,
+      missingRequired,
+      missingOptional,
     });
-  });
-}
+  } catch (err) {
+    errorMessageEl.style.display = "block";
+    errorMessageEl.textContent = err.message;
+  }
+});
+
+/* かんたん入力モード */
+btnQuickGenerate.addEventListener("click", () => {
+  try {
+    currentInputMode = "quick";
+    resetOutputs();
+
+    const modeKey = modeSelect.value;
+    const text = buildReportFromQuick(modeKey);
+    generatedReportEl.textContent = text;
+
+    const { score, missingRequired, missingOptional } = evaluateLocal(modeKey);
+
+    callAiEvaluate({
+      mode: modeKey,
+      reportText: text,
+      localScore: score,
+      missingRequired,
+      missingOptional,
+    });
+  } catch (err) {
+    errorMessageEl.style.display = "block";
+    errorMessageEl.textContent = err.message;
+  }
+});
+
+/* 書き直しコピー */
+btnCopyRewrite.addEventListener("click", async () => {
+  try {
+    await navigator.clipboard.writeText(aiRewriteText.value);
+  } catch (err) {
+    console.error(err);
+  }
+});
+
+/* 上のAI文章に反映 */
+btnApplyRewrite.addEventListener("click", () => {
+  generatedReportEl.textContent = aiRewriteText.value;
+  window.scrollTo({ top: 0, behavior: "smooth" });
+});
+
+/* 3行要約コピー */
+btnCopyShort.addEventListener("click", async () => {
+  try {
+    if (aiShortText.value.trim()) {
+      await navigator.clipboard.writeText(aiShortText.value);
+    }
+  } catch (err) {
+    console.error(err);
+  }
+});
+
+/* -------------------------------------------------------
+   Init
+------------------------------------------------------- */
+applyMode("report");
