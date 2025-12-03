@@ -137,13 +137,23 @@ body {
 
 .vital-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-  gap: 0.5rem;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 0.6rem;
+}
+
+.vital-grid > div {
+  min-width: 0; /* はみ出し防止 */
 }
 
 .vital-grid label {
   font-size: 0.75rem;
   color: var(--text-sub);
+  display: block;
+  margin-bottom: 0.15rem;
+}
+
+.vital-grid .field-input {
+  width: 100%;
 }
 
 /* Buttons */
