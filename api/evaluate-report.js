@@ -15,7 +15,7 @@ export default async function handler(req, res) {
   try {
     const body = req.body || {};
     const {
-      flow, // "generateQuestions" | "buildReport" | "fullEvaluate" | undefined
+      flow,
       mode,
       seedText,
       userName,
@@ -29,9 +29,7 @@ export default async function handler(req, res) {
     const modeLabel =
       mode === "instruction" ? "指示モード" : "共有・報告モード";
 
-    // ---------------------------------------------------
-    // ① generateQuestions : Q + POINT を返す
-    // ---------------------------------------------------
+    // ---------- ① generateQuestions ----------
     if (flow === "generateQuestions") {
       if (!seedText || !mode) {
         return res.status(400).json({
@@ -49,18 +47,17 @@ export default async function handler(req, res) {
 - 新人職員にも学びになるように、各質問の意図（POINT）も伝える
 
 【出力形式】
-下記の JSON だけを出力してください。余分な文章を書いてはいけません。
+下記の JSON だけを出力してください。
 
 {
   "questions": [
-    { "question": "質問文", "point": "この質問で何を確認したいか（新人向け解説）" },
-    ...
+    { "question": "質問文", "point": "この質問で何を確認したいか（新人向け解説）" }
   ]
 }
 
 ルール：
 - 質問は3〜7個
-- 現場職員が答えやすい、日本語として自然な聞き方
+- 現場職員が答えやすい日本語
 - POINT は1〜2文で簡潔に
       `.trim();
 
@@ -97,7 +94,6 @@ ${seedText}
             .filter((q) => q.question.length > 0);
         }
       } catch (e) {
-        // JSONとして解釈できなければ簡易パース（保険）
         const lines = raw
           .split("\n")
           .map((l) => l.trim())
@@ -113,7 +109,8 @@ ${seedText}
       if (!questions.length) {
         questions = [
           {
-            question: "まず、いつ・どこで・誰に起きた出来事かを教えてください。",
+            question:
+              "まず、いつ・どこで・誰に起きた出来事かを教えてください。",
             point:
               "報告の基本である「いつ・どこで・誰に」は、最初に必ず押さえておきたい情報です。",
           },
@@ -123,9 +120,7 @@ ${seedText}
       return res.status(200).json({ questions });
     }
 
-    // ---------------------------------------------------
-    // ② buildReport : Q&A と基本情報から本文生成
-    // ---------------------------------------------------
+    // ---------- ② buildReport ----------
     if (flow === "buildReport") {
       if (!qaLog || !Array.isArray(qaLog) || qaLog.length === 0) {
         return res.status(400).json({
@@ -138,12 +133,11 @@ ${seedText}
 現場職員との Q&A と基本情報をもとに、施設内共有向けの報告文を作成します。
 
 【ルール】
-- 誰が・いつ・どこで・何をしているときに・どうなったか を分かりやすく整理する
-- 安全面・再発防止の観点から重要な事実は落とさない
-- 箇条書きではなく、文章として読める形にまとめる（必要なら段落分けOK）
-- 不明な点は「情報不足のため不明」と記載し、勝手に補わない
-- 見出しは 「■ 概要」「■ 基本情報」「■ 経過」「■ 実施した対応」「■ 今後の観察・報告ライン」 程度に整理する
-- POINT や解説は本文には含めない（報告文としてそのまま使える形にする）
+- 誰が・いつ・どこで・何をしているときに・どうなったか を分かりやすく整理
+- 安全面・再発防止の観点で重要な事実は落とさない
+- 箇条書きではなく、文章として読める形にまとめる
+- 不明な点は「情報不足」と記載し、勝手に補わない
+- 「■ 概要」「■ 基本情報」「■ 経過」「■ 実施した対応」「■ 今後の観察・報告ライン」を基本構成とする
       `.trim();
 
       const basic = basicInfo || {};
@@ -183,9 +177,7 @@ ${qaText}
       return res.status(200).json({ reportText: text.trim() });
     }
 
-    // ---------------------------------------------------
-    // ③ fullEvaluate : 評価＋書き直し＋3行要約＋新人ポイント
-    // ---------------------------------------------------
+    // ---------- ③ fullEvaluate ----------
     if (!reportText || !mode) {
       return res.status(400).json({
         error: "fullEvaluate には mode と reportText が必要です。",
@@ -197,16 +189,16 @@ ${qaText}
 現場職員の報告力・判断力・ケアの質を育てるAIメンターです。
 
 【基本ルール】
-- 曖昧な表現があれば必ず指摘し、専門職向けの客観的な表現に変換する。
-- 不足情報は勝手に補わず、「情報不足」と明記する。
-- 職員を責めず、次に活かせるフィードバックを行う。
-- 文章構成の整理・重複削除・時系列整理も行う。
+- 曖昧表現は必ず指摘し、客観的な専門表現に言い換える
+- 不足情報は「情報不足」と明記し、推測で補わない
+- 職員を責めず、次につながるフィードバックにする
+- 構成の整理・重複削除・時系列整理も行う
 
 【新人向け教育】
 - 適切な専門表現・言い換え
 - ケース別の観察ポイント
 - 初期対応の基本
-- 看護師／管理者／家族への報告ライン
+- 報告ライン
 - 危険サイン（Red Flag）
 - 次回の似たケースでの考え方
     `.trim();
@@ -227,23 +219,15 @@ ${reportText}
 ④ 管理者として追加で確認したい点（質問リスト）
 ⑤ 専門的な書き直し例（全文）
 ⑥ 夜勤・申し送り用の3行要約
-
 ${
   includeEducation
-    ? `⑦ 新人向けポイント（教育用）
-- 適切な専門表現・言い換え
-- このケースで必ず観察すべき項目
-- 初期対応のポイント
-- 誰に・どのタイミングで報告すべきか
-- 危険サイン（Red Flag）と理由
-- 次回似たケースでの考え方（思考のフレーム）`
+    ? `⑦ 新人向けポイント（教育用）`
     : ""
 }
 
 最後に「スコア：85」のように 0〜100 の総合点を1つだけ示してください。
 
-さらに ${includeEducation ? "回答の一番最後に" : ""}  
-3行要約だけを次の形式で再掲してください：
+さらに、回答の末尾に次の形式で3行要約だけを再掲してください：
 
 <<SHORT>>
 （ここに3行要約のみ）
@@ -288,16 +272,21 @@ ${
       if (eduMatch) eduText = eduMatch[1].trim();
     }
 
-    // SHORT/EDU を除いたフィードバック本文
-    const feedbackText = full
+    // SHORT/EDU を除外
+    let feedbackText = full
       .replace(/<<SHORT>>[\s\S]*?<<END_SHORT>>/, "")
       .replace(/<<EDU>>[\s\S]*?<<END_EDU>>/, "")
       .trim();
 
-    // ⑤以降の書き直し例（ざっくり）
+    // ⑥以降（3行要約・新人ポイント）はフィードバックからカット
+    feedbackText = feedbackText.split(/\n+⑥/)[0].trim();
+
+    // ⑤ 専門的な書き直し例 だけを抽出
     let rewriteText = "";
     const rewriteMatch = feedbackText.match(/⑤[^\n]*\n([\s\S]*)/);
-    if (rewriteMatch) rewriteText = rewriteMatch[1].trim();
+    if (rewriteMatch) {
+      rewriteText = rewriteMatch[1].trim();
+    }
 
     return res.status(200).json({
       aiScore,

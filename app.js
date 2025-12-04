@@ -34,10 +34,8 @@ const localScoreLevelEl = el("localScoreLevel");
 const localScoreDetailEl = el("localScoreDetail");
 
 const generatedReportEl = el("generatedReport");
-const aiScoreValueEl = el("aiScoreValue");
 const aiFeedbackEl = el("aiFeedback");
 
-const aiRewriteEl = el("aiRewrite");
 const aiRewriteCard = el("aiRewriteCard");
 const aiRewriteText = el("aiRewriteText");
 
@@ -99,10 +97,8 @@ function resetOutputs() {
 
   generatedReportEl.textContent = "";
 
-  aiScoreValueEl.textContent = "-";
   aiFeedbackEl.innerHTML = "";
 
-  aiRewriteEl.textContent = "";
   aiRewriteText.value = "";
   aiRewriteCard.style.display = "none";
 
@@ -187,6 +183,8 @@ function clearDialogue() {
   dialogueArea.innerHTML = "";
   dialogueAnswerArea.style.display = "none";
   dialogueAnswerInput.value = "";
+  dialogueHintEl.textContent =
+    "例のように、ざっくりで構いません。難しく考えなくてOKです。";
 }
 
 function appendQuestion(qObj) {
@@ -310,8 +308,16 @@ btnSendAnswer.addEventListener("click", () => {
       appendQuestion(dialogueState.questions[dialogueState.index]);
       dialogueAnswerInput.focus();
     } else {
+      // 質問終了時の案内メッセージ
+      const finalQ = {
+        question:
+          "質問は以上です。この内容で報告文を作成する場合は、画面下の「この内容で報告文を作成」を押してください。\n発熱・呼吸苦・血圧の変動など体調の変化があるケースでは、STEP1の「バイタル」もできる範囲で入力しておくと安心です。",
+        point: "",
+      };
+      appendQuestion(finalQ);
+
       dialogueHintEl.textContent =
-        "質問は以上です。「この内容で報告文を作成」を押すと文章が自動生成されます。";
+        "質問は終了しました。「この内容で報告文を作成」を押すと文章が自動生成されます。";
       dialogueAnswerInput.focus();
     }
   } catch (err) {
@@ -352,7 +358,6 @@ btnFinishDialogue.addEventListener("click", async () => {
     });
 
     const reportText = buildRes.reportText || "";
-    generatedReportEl.textContent = reportText;
 
     // ② ローカルスコア
     const localScore = evaluateLocal();
@@ -367,14 +372,18 @@ btnFinishDialogue.addEventListener("click", async () => {
     });
 
     const {
-      aiScore,
+      aiScore, // 今はUI表示しないが一応受け取る
       feedbackText,
       rewriteText,
       shortText,
       educationText: edu,
     } = evalRes;
 
-    aiScoreValueEl.textContent = aiScore != null ? aiScore : "-";
+    // 最終版：書き直しがあればそれを優先
+    const finalText =
+      rewriteText && rewriteText.trim().length ? rewriteText.trim() : reportText;
+
+    generatedReportEl.textContent = finalText;
 
     // フィードバック本文
     aiFeedbackEl.innerHTML = "";
@@ -388,11 +397,10 @@ btnFinishDialogue.addEventListener("click", async () => {
         aiFeedbackEl.appendChild(p);
       });
 
-    // 書き直し
-    aiRewriteEl.textContent = rewriteText || "";
-    if (rewriteText) {
+    // 編集用テキスト
+    if (finalText) {
       aiRewriteCard.style.display = "block";
-      aiRewriteText.value = rewriteText;
+      aiRewriteText.value = finalText;
     } else {
       aiRewriteCard.style.display = "none";
       aiRewriteText.value = "";

@@ -118,7 +118,7 @@
               id="dialogueSeed"
               class="input-textarea"
               rows="2"
-              placeholder="例）◯◯様が食事を全量拒否されました。嘔吐はなく、水分は少量なら摂取できますが、いつもより表情が乏しく元気がありません。"
+              placeholder="例）◯◯様が食事を全量拒否されています。嘔吐はなく、水分は少量なら摂取できますが、いつもより表情が乏しく元気がありません。"
             ></textarea>
             <p class="field-hint" id="dialogueHint">
               例のように、ざっくりで構いません。難しく考えなくてOKです。
@@ -185,7 +185,7 @@
           </div>
         </section>
 
-        <!-- AIに渡す文章 -->
+        <!-- 施設内共有向けの文章（黒画面：最終版） -->
         <section class="card">
           <div class="card-header">
             <h2 class="card-title">施設内共有向けの文章</h2>
@@ -201,11 +201,6 @@
             <h2 class="card-title">AIからの管理者目線フィードバック</h2>
           </div>
           <div class="card-body">
-            <div class="ai-score">
-              <span class="ai-score-label">AIスコア</span>
-              <span class="ai-score-value" id="aiScoreValue">-</span>
-              <span class="ai-score-unit">点 / 100</span>
-            </div>
             <div class="education-toggle">
               <label>
                 <input type="checkbox" id="toggleEducation" checked />
@@ -213,19 +208,6 @@
               </label>
             </div>
             <div id="aiFeedback" class="ai-feedback"></div>
-          </div>
-        </section>
-
-        <!-- 書き直し全文 -->
-        <section class="card">
-          <div class="card-header">
-            <h2 class="card-title">AIによる書き直し例（全文）</h2>
-          </div>
-          <div class="card-body">
-            <details class="rewrite-block">
-              <summary>書き直し例を表示</summary>
-              <pre id="aiRewrite" class="ai-rewrite"></pre>
-            </details>
           </div>
         </section>
 
