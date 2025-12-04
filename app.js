@@ -194,8 +194,12 @@ function clearDialogue() {
   dialogueHintEl.textContent =
     "例のように、ざっくりで構いません。難しく考えなくてOKです。";
 
-  // 報告文作成ボタンを無効に戻す
+  // 報告文作成ボタンを無効に戻す（白のアウトライン）
   btnFinishDialogue.disabled = true;
+  btnFinishDialogue.classList.remove("btn-primary");
+  if (!btnFinishDialogue.classList.contains("btn-outline")) {
+    btnFinishDialogue.classList.add("btn-outline");
+  }
 }
 
 function appendQuestion(qObj) {
@@ -320,7 +324,7 @@ btnSendAnswer.addEventListener("click", () => {
       appendQuestion(dialogueState.questions[dialogueState.index]);
       dialogueAnswerInput.focus();
     } else {
-      // 質問終了時の案内メッセージ（バイタル案内はSTEP1側に集約済）
+      // 質問終了時の案内メッセージ
       const finalQ = {
         question:
           "質問は以上です。この内容で報告文を作成する場合は、下の「この内容で報告文を作成」を押してください。",
@@ -331,8 +335,10 @@ btnSendAnswer.addEventListener("click", () => {
       dialogueHintEl.textContent =
         "質問は終了しました。「この内容で報告文を作成」を押すと文章が自動生成されます。";
 
-      // ここで初めて報告文作成ボタンを有効化
+      // ここで初めて報告文作成ボタンを有効化＆青色に変更
       btnFinishDialogue.disabled = false;
+      btnFinishDialogue.classList.remove("btn-outline");
+      btnFinishDialogue.classList.add("btn-primary");
       dialogueAnswerInput.focus();
     }
   } catch (err) {
@@ -435,7 +441,7 @@ btnFinishDialogue.addEventListener("click", async () => {
       aiShortText.value = "";
     }
 
-    // 重要ポイント（旧：新人向け）
+    // 重要ポイント
     if (edu && edu.trim()) {
       educationText.value = edu.trim();
       if (toggleEducation.checked) {

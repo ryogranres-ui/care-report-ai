@@ -95,10 +95,14 @@
                 </div>
               </div>
               <p id="hint-vital" class="field-hint">
-                発熱・呼吸苦・胸痛・血圧の大きな変動など、体調の変化がある場合はできる範囲で記入してください。
+                発熱・呼吸苦・胸痛・強い倦怠感・血圧の大きな変動など、体調の変化がある場合はできる範囲で記入してください。
                 測定していない場合は空欄のままで構いません。
               </p>
             </details>
+            <!-- 折りたたみが閉じていても見える注意書き -->
+            <p class="field-hint">
+              ※発熱や呼吸苦、胸痛、血圧の急な変動など<strong>体調変化がある時はバイタル欄を開いて記入</strong>してください。
+            </p>
           </div>
         </section>
 
@@ -149,7 +153,7 @@
                 回答を送信
               </button>
             </div>
-            <div class="actions">
+            <div class="actions actions-right">
               <button type="button" id="btnFinishDialogue" class="btn btn-outline" disabled>
                 この内容で報告文を作成
               </button>
@@ -263,7 +267,7 @@
           </div>
           <div class="card-body">
             <p class="field-hint">
-              受診相談・指示確認など、医師や医療機関に報告する際に参考として使用してください。
+              受診相談・指示確認など、医師や医療機関に報告する際に読み上げ用として使用してください。
               内容は自由に追記・修正できます。
             </p>
             <textarea id="doctorSummaryText" class="output-textarea" rows="8"></textarea>
