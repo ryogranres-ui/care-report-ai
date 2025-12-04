@@ -1,6 +1,4 @@
-// -----------------------------------------------------------
-//  Care Report AI - evaluate-report.js（Vercel serverless）
-// -----------------------------------------------------------
+// Care Report AI - evaluate-report.js（Vercel serverless）
 
 import OpenAI from "openai";
 
@@ -15,52 +13,65 @@ export default async function handler(req, res) {
   }
 
   try {
+    const body = req.body || {};
     const {
-      flow, // "question" | undefined
+      flow, // "generateQuestions" | "buildReport" | "fullEvaluate" | undefined
       mode,
+      seedText,
+      userName,
+      qaLog,
+      basicInfo,
       reportText,
       localScore,
-      missingRequired,
-      missingOptional,
-      seedText,
       includeEducation,
-    } = req.body || {};
+    } = body;
 
     const modeLabel =
       mode === "instruction" ? "指示モード" : "共有・報告モード";
 
-    // ==============================
-    // ① 質問生成モード
-    // ==============================
-    if (flow === "question") {
+    // ---------------------------------------------------
+    // ① generateQuestions : Q + POINT を返す
+    // ---------------------------------------------------
+    if (flow === "generateQuestions") {
       if (!seedText || !mode) {
         return res.status(400).json({
-          error: "flow=question の場合、mode と seedText が必須です。",
+          error: "generateQuestions には mode と seedText が必要です。",
         });
       }
 
       const systemPrompt = `
 あなたは介護施設の「看護師長 兼 管理者」です。
-職員から簡単な状況説明を聞き、その内容をもとに
+職員から短い状況説明を聞き、その内容をもとに
 必要な情報を漏れなく集めるための「質問リスト」を作成します。
 
-【ルール】
-- 3〜7個程度の質問にまとめる
-- 「はい／いいえ」で答えられる質問と、短い文章で答える質問を混ぜる
-- 現場職員が答えやすい、日本語として自然な聞き方にする
-- 事故・状態変化・日常の様子の共有でよく使う観察ポイントも含める
-- 文章の先頭に「Q1:」「Q2:」の形式で番号を付ける
-- 質問文だけを出力し、解説や前置きは書かない
+【目的】
+- 報告に必要な事実をもれなく聞き出す
+- 新人職員にも学びになるように、各質問の意図（POINT）も伝える
+
+【出力形式】
+下記の JSON だけを出力してください。余分な文章を書いてはいけません。
+
+{
+  "questions": [
+    { "question": "質問文", "point": "この質問で何を確認したいか（新人向け解説）" },
+    ...
+  ]
+}
+
+ルール：
+- 質問は3〜7個
+- 現場職員が答えやすい、日本語として自然な聞き方
+- POINT は1〜2文で簡潔に
       `.trim();
 
       const userPrompt = `
 【モード】${modeLabel}
+【対象利用者】${userName || "（未記入）"}
 
-【職員からの簡単な状況説明】
+【職員からの状況説明】
 ${seedText}
 
-上記の内容をもとに、
-職員から必要な情報を聞き出すための質問を作成してください。
+上記をもとに、質問リストを JSON 形式で作成してください。
       `.trim();
 
       const completion = await client.chat.completions.create({
@@ -72,35 +83,112 @@ ${seedText}
         ],
       });
 
-      const fullText = completion.choices?.[0]?.message?.content || "";
-      const lines = fullText
-        .split("\n")
-        .map((l) => l.trim())
-        .filter(Boolean);
+      const raw = completion.choices?.[0]?.message?.content || "";
+      let questions = [];
 
-      const questions = [];
-      for (const line of lines) {
-        const m = line.match(/Q\d+[:：]\s*(.+)/);
-        if (m) {
-          questions.push(m[1].trim());
-        } else if (!line.startsWith("Q") && line.length > 0) {
-          questions.push(line);
+      try {
+        const parsed = JSON.parse(raw);
+        if (parsed && Array.isArray(parsed.questions)) {
+          questions = parsed.questions
+            .map((q) => ({
+              question: String(q.question || "").trim(),
+              point: String(q.point || "").trim(),
+            }))
+            .filter((q) => q.question.length > 0);
+        }
+      } catch (e) {
+        // JSONとして解釈できなければ簡易パース（保険）
+        const lines = raw
+          .split("\n")
+          .map((l) => l.trim())
+          .filter(Boolean);
+        for (const line of lines) {
+          const m = line.match(/Q\d*[:：]\s*(.+)/);
+          if (m) {
+            questions.push({ question: m[1].trim(), point: "" });
+          }
         }
       }
 
       if (!questions.length) {
-        questions.push("状況をもう少し具体的に教えてください。");
+        questions = [
+          {
+            question: "まず、いつ・どこで・誰に起きた出来事かを教えてください。",
+            point:
+              "報告の基本である「いつ・どこで・誰に」は、最初に必ず押さえておきたい情報です。",
+          },
+        ];
       }
 
       return res.status(200).json({ questions });
     }
 
-    // ==============================
-    // ② 従来の評価モード
-    // ==============================
+    // ---------------------------------------------------
+    // ② buildReport : Q&A と基本情報から本文生成
+    // ---------------------------------------------------
+    if (flow === "buildReport") {
+      if (!qaLog || !Array.isArray(qaLog) || qaLog.length === 0) {
+        return res.status(400).json({
+          error: "buildReport には qaLog（Q&Aの配列）が必要です。",
+        });
+      }
+
+      const systemPrompt = `
+あなたは介護施設の「看護師長 兼 管理者」です。
+現場職員との Q&A と基本情報をもとに、施設内共有向けの報告文を作成します。
+
+【ルール】
+- 誰が・いつ・どこで・何をしているときに・どうなったか を分かりやすく整理する
+- 安全面・再発防止の観点から重要な事実は落とさない
+- 箇条書きではなく、文章として読める形にまとめる（必要なら段落分けOK）
+- 不明な点は「情報不足のため不明」と記載し、勝手に補わない
+- 見出しは 「■ 概要」「■ 基本情報」「■ 経過」「■ 実施した対応」「■ 今後の観察・報告ライン」 程度に整理する
+- POINT や解説は本文には含めない（報告文としてそのまま使える形にする）
+      `.trim();
+
+      const basic = basicInfo || {};
+      const qaText = (qaLog || [])
+        .map(
+          (item, idx) =>
+            `Q${idx + 1}: ${item.question}\nA${idx + 1}: ${item.answer}`
+        )
+        .join("\n\n");
+
+      const userPrompt = `
+【モード】${modeLabel}
+
+【基本情報】
+- 作成者：${basic.reporterName || "（未記入）"}
+- 対象者：${basic.userName || "（未記入）"}
+- 日時：${basic.eventDateTime || "（未記入）"}
+- 場所：${basic.eventPlace || "（未記入）"}
+- バイタル：${basic.vitalText || "（未記入）"}
+
+【職員とのQ&A】
+${qaText}
+
+上記をもとに、施設内共有向けの報告文を1本作成してください。
+      `.trim();
+
+      const completion = await client.chat.completions.create({
+        model: "gpt-4o-mini",
+        temperature: 0.4,
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userPrompt },
+        ],
+      });
+
+      const text = completion.choices?.[0]?.message?.content || "";
+      return res.status(200).json({ reportText: text.trim() });
+    }
+
+    // ---------------------------------------------------
+    // ③ fullEvaluate : 評価＋書き直し＋3行要約＋新人ポイント
+    // ---------------------------------------------------
     if (!reportText || !mode) {
       return res.status(400).json({
-        error: "mode と reportText は必須です。",
+        error: "fullEvaluate には mode と reportText が必要です。",
       });
     }
 
@@ -111,44 +199,21 @@ ${seedText}
 【基本ルール】
 - 曖昧な表現があれば必ず指摘し、専門職向けの客観的な表現に変換する。
 - 不足情報は勝手に補わず、「情報不足」と明記する。
-- 文章は、誰が読んでも分かるように簡潔に。
-- 職員を責める言い方は禁止。改善の方向性と「次回への学び」を伝える。
-- 文章構成の整理・重複削除・時系列整理も積極的に行う。
+- 職員を責めず、次に活かせるフィードバックを行う。
+- 文章構成の整理・重複削除・時系列整理も行う。
 
-【新人向け教育について】
-新人職員が数年かけて身につけるような内容を、短時間で学べるようにします。
+【新人向け教育】
 - 適切な専門表現・言い換え
-- ケース別の観察ポイント（転倒・発熱・食事拒否・便秘・服薬ミス・認知症の周辺症状など）
+- ケース別の観察ポイント
 - 初期対応の基本
 - 看護師／管理者／家族への報告ライン
 - 危険サイン（Red Flag）
-- 「次に似たケースが来たとき、どう考えると良いか」
+- 次回の似たケースでの考え方
     `.trim();
 
     const userPrompt = `
 【モード】${modeLabel}
-
-【ローカルスコア】
-${localScore} 点
-
-【不足している可能性のある項目】
-- 必須: ${
-      missingRequired && missingRequired.length
-        ? missingRequired.join("／")
-        : "なし"
-    }
-- 任意: ${
-      missingOptional && missingOptional.length
-        ? missingOptional.join("／")
-        : "なし"
-    }
-
-【チェックの観点】
-- 安全面（急変・再発・危険の見落としがないか）
-- 情報抜け漏れ（誰が／いつ／どこで／何をした／どうなった）
-- 指示モードでは「いつまでに・どこまでやれば完了か」が明確か
-- 専門職が読んで分かる具体性
-- 新人にとって学びになる観点（専門表現・観察ポイント・対応・危険サインなど）
+【ローカルスコア】${localScore ?? "（未計算）"} 点
 
 【職員が作成した文章】
 ---
@@ -157,29 +222,28 @@ ${reportText}
 
 【出力フォーマット】
 ① 総評（1〜3行）
-② 曖昧表現の指摘と改善案（箇条書きOK）
-③ 不足している情報（事実ベースで）
+② 曖昧表現の指摘と改善案
+③ 不足している情報
 ④ 管理者として追加で確認したい点（質問リスト）
 ⑤ 専門的な書き直し例（全文）
-⑥ 夜勤・申し送り用の3行要約（重要な事実のみ）
+⑥ 夜勤・申し送り用の3行要約
 
 ${
   includeEducation
-    ? `⑦ 新人向けポイント（教育用）  
-以下の観点を、過不足なく・簡潔にまとめてください。  
-- 適切な専門表現・言い換え  
-- このケースで必ず観察すべき項目  
-- 初期対応のポイント（何を優先するか）  
-- 看護師／管理者／家族など、誰にどのタイミングで報告すべきか  
-- 危険サイン（Red Flag）と、その理由  
-- 次に似たケースが来たときに、どう考えると良いか（思考のフレーム）`
+    ? `⑦ 新人向けポイント（教育用）
+- 適切な専門表現・言い換え
+- このケースで必ず観察すべき項目
+- 初期対応のポイント
+- 誰に・どのタイミングで報告すべきか
+- 危険サイン（Red Flag）と理由
+- 次回似たケースでの考え方（思考のフレーム）`
     : ""
 }
 
 最後に「スコア：85」のように 0〜100 の総合点を1つだけ示してください。
 
-さらに ${includeEducation ? "**回答の一番最後** に、" : ""}  
-夜勤・申し送り用の3行要約のみを次の形式で再掲してください：
+さらに ${includeEducation ? "回答の一番最後に" : ""}  
+3行要約だけを次の形式で再掲してください：
 
 <<SHORT>>
 （ここに3行要約のみ）
@@ -188,7 +252,7 @@ ${
 ${
   includeEducation
     ? `
-そして、新人向けポイント（⑦）の内容のみを次の形式で再掲してください：
+そして、新人向けポイント（⑦）の内容だけを次の形式で再掲してください：
 
 <<EDU>>
 （ここに新人向けポイントのみ）
@@ -206,51 +270,44 @@ ${
       ],
     });
 
-    const fullText = completion.choices?.[0]?.message?.content || "";
+    const full = completion.choices?.[0]?.message?.content || "";
 
     // スコア抽出
-    const scoreMatch = fullText.match(/スコア[:：]\s*(\d{1,3})/);
+    const scoreMatch = full.match(/スコア[:：]\s*(\d{1,3})/);
     const aiScore = scoreMatch ? Math.min(100, parseInt(scoreMatch[1], 10)) : null;
 
     // SHORT抽出
     let shortText = "";
-    const shortMatch = fullText.match(/<<SHORT>>([\s\S]*?)<<END_SHORT>>/);
-    if (shortMatch) {
-      shortText = shortMatch[1].trim();
-    }
+    const shortMatch = full.match(/<<SHORT>>([\s\S]*?)<<END_SHORT>>/);
+    if (shortMatch) shortText = shortMatch[1].trim();
 
     // EDU抽出
-    let educationText = "";
+    let eduText = "";
     if (includeEducation) {
-      const eduMatch = fullText.match(/<<EDU>>([\s\S]*?)<<END_EDU>>/);
-      if (eduMatch) {
-        educationText = eduMatch[1].trim();
-      }
+      const eduMatch = full.match(/<<EDU>>([\s\S]*?)<<END_EDU>>/);
+      if (eduMatch) eduText = eduMatch[1].trim();
     }
 
-    // SHORT/EDUブロックを除いたフィードバック全文
-    const feedbackText = fullText
+    // SHORT/EDU を除いたフィードバック本文
+    const feedbackText = full
       .replace(/<<SHORT>>[\s\S]*?<<END_SHORT>>/, "")
       .replace(/<<EDU>>[\s\S]*?<<END_EDU>>/, "")
       .trim();
 
-    // ⑤以降の書き直し例
+    // ⑤以降の書き直し例（ざっくり）
     let rewriteText = "";
     const rewriteMatch = feedbackText.match(/⑤[^\n]*\n([\s\S]*)/);
-    if (rewriteMatch) {
-      rewriteText = rewriteMatch[1].trim();
-    }
+    if (rewriteMatch) rewriteText = rewriteMatch[1].trim();
 
     return res.status(200).json({
       aiScore,
       feedbackText,
       rewriteText,
       shortText,
-      educationText,
+      educationText: eduText,
     });
   } catch (err) {
-    console.error("API evaluate-report error:", err);
-
+    console.error("evaluate-report error:", err);
     return res.status(500).json({
       error: "AI評価中にサーバ側エラーが発生しました。",
       detail: err.message || String(err),

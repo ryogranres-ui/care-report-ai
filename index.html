@@ -30,118 +30,10 @@
 
   <main class="app-main">
     <section class="layout">
-      <!-- 左カラム：入力エリア -->
+      <!-- 左カラム：入力（STEP1・STEP2） -->
       <div class="column column-left">
 
-        <!-- AIヒアリングモード -->
-        <section class="card card-dialogue">
-          <div class="card-header">
-            <span class="step-badge step-badge-alt">ASK</span>
-            <h2 class="card-title">AIヒアリングモード（質問に答えるだけ）</h2>
-          </div>
-          <p class="card-description">
-            まずは、今の状況を1〜2行でざっくり教えてください。<br />
-            その内容をもとに、AIが必要なことを順番に質問します。
-          </p>
-
-          <div class="form-group">
-            <label for="dialogueSeed" class="field-label">いま起きていること（1〜2行）</label>
-            <textarea
-              id="dialogueSeed"
-              class="input-textarea"
-              rows="2"
-              placeholder="例）◯◯様がトイレから戻る途中でふらつきがあり、ベッド手前で膝をつくように倒れました。頭部打撲はなく、少し膝の痛みを訴えています。"
-            ></textarea>
-            <p class="field-hint" id="dialogueHint">
-              例のように、ざっくりで構いません。難しく考えなくてOKです。
-            </p>
-          </div>
-
-          <div class="actions actions-right">
-            <button type="button" id="btnStartDialogue" class="btn btn-primary">
-              AIに質問してもらう
-            </button>
-          </div>
-
-          <div id="dialogueArea" class="dialogue-log">
-            <!-- AIの質問と職員の回答が積み上がる -->
-          </div>
-
-          <div id="dialogueAnswerArea" class="dialogue-answer-area" style="display:none;">
-            <label for="dialogueAnswerInput" class="field-label">AIからの質問への回答</label>
-            <textarea
-              id="dialogueAnswerInput"
-              class="input-textarea"
-              rows="2"
-              placeholder="ここに回答を入力して「回答を送信」を押してください。"
-            ></textarea>
-            <div class="actions">
-              <button type="button" id="btnSendAnswer" class="btn btn-secondary">
-                回答を送信
-              </button>
-              <button type="button" id="btnFinishDialogue" class="btn btn-outline">
-                この内容で報告文を作成
-              </button>
-            </div>
-          </div>
-        </section>
-
-        <!-- かんたん入力モード -->
-        <section class="card card-quick">
-          <div class="card-header">
-            <span class="step-badge">SHORT</span>
-            <h2 class="card-title">かんたん入力（3行でAIに任せる）</h2>
-          </div>
-          <p class="card-description">
-            忙しいときは、ここに要点だけ3〜5行で書けばOKです。<br />
-            AIが「共有・報告」または「指示」用の文章を自動で組み立てます。
-          </p>
-
-          <div class="quick-tags">
-            <p class="field-label">カテゴリ（あてはまるものをタップ）</p>
-            <div class="quick-tag-list">
-              <button type="button" class="quick-tag" data-tag="体調変化">体調変化</button>
-              <button type="button" class="quick-tag" data-tag="転倒・ケガ">転倒・ケガ</button>
-              <button type="button" class="quick-tag" data-tag="発熱">発熱</button>
-              <button type="button" class="quick-tag" data-tag="家族からの連絡">家族からの連絡</button>
-              <button type="button" class="quick-tag" data-tag="物品・設備トラブル">物品・設備トラブル</button>
-              <button type="button" class="quick-tag" data-tag="その他">その他</button>
-            </div>
-          </div>
-
-          <div class="quick-tags">
-            <p class="field-label">目的</p>
-            <div class="quick-tag-list">
-              <button type="button" class="quick-tag" data-tag="観察依頼">観察依頼</button>
-              <button type="button" class="quick-tag" data-tag="ケア方法の変更相談">ケア方法の変更相談</button>
-              <button type="button" class="quick-tag" data-tag="受診の相談">受診の相談</button>
-              <button type="button" class="quick-tag" data-tag="家族への共有">家族への共有</button>
-              <button type="button" class="quick-tag" data-tag="記録のための共有">記録のための共有</button>
-            </div>
-          </div>
-
-          <div class="form-group">
-            <label for="quickBullets" class="field-label">要点メモ（3〜5行）</label>
-            <textarea
-              id="quickBullets"
-              class="input-textarea"
-              rows="4"
-              placeholder="例）&#10;・17時ごろ、◯◯様がトイレから出る際にふらつきあり&#10;・ベッドに戻る途中で膝をつくように倒れた（頭部打撲なし）&#10;・その後も会話は普段通りで、痛みは軽度と訴えあり"
-            ></textarea>
-            <p class="field-hint">
-              ・1行につき「1つの事実」を書くイメージで入力してください。<br />
-              ・書きやすい順番でOKです。AIが順番を並べ替えます。
-            </p>
-          </div>
-
-          <div class="actions actions-right">
-            <button type="button" id="btnQuickGenerate" class="btn btn-primary">
-              この要点から報告／指示文をつくる
-            </button>
-          </div>
-        </section>
-
-        <!-- STEP1 基本情報（＋折りたたみバイタル） -->
+        <!-- STEP1 基本情報 -->
         <section class="card">
           <div class="card-header">
             <span class="step-badge">STEP 1</span>
@@ -177,7 +69,7 @@
               </p>
             </div>
 
-            <!-- 折りたたみバイタル -->
+            <!-- ▼ バイタル（折りたたみ） -->
             <details class="vital-details">
               <summary class="vital-summary">バイタル（必要時のみ）</summary>
               <div class="vital-grid">
@@ -209,111 +101,75 @@
           </div>
         </section>
 
-        <!-- STEP2 内容 -->
-        <section class="card">
+        <!-- STEP2 AIヒアリング -->
+        <section class="card card-dialogue">
           <div class="card-header">
-            <span class="step-badge">STEP 2</span>
-            <h2 class="card-title">内容</h2>
+            <span class="step-badge step-badge-alt">STEP 2</span>
+            <h2 class="card-title">AIヒアリングモード（質問に答えるだけ）</h2>
           </div>
-          <div class="card-body">
-            <div class="form-group">
-              <label id="label-summary" for="summary" class="field-label">概要（ひとことで言うと？）</label>
-              <textarea
-                id="summary"
-                class="input-textarea"
-                rows="2"
-                placeholder="例）◯◯様がトイレから戻る際にふらつきがあり、転倒はなかったが膝を強く打った可能性がある。"
-              ></textarea>
-              <p id="hint-summary" class="field-hint">
-                一言で「何があったのか」「何を伝えたいのか」を書いてください。
-              </p>
-            </div>
+          <p class="card-description">
+            まずは、今の状況を1〜2行でざっくり教えてください。<br />
+            その内容をもとに、AIが必要なことを順番に質問します。
+          </p>
 
-            <div class="form-group">
-              <label id="label-details" for="details" class="field-label">詳しい状況・経過</label>
-              <textarea
-                id="details"
-                class="input-textarea"
-                rows="4"
-                placeholder="例）いつ・どこで・誰が・何をしているときに・どうなったか、時系列で書いてください。"
-              ></textarea>
-              <p id="hint-details" class="field-hint">
-                「直前の様子 → 起きたこと → その後の様子」の順で書くと分かりやすくなります。
-              </p>
-            </div>
-
-            <div class="form-group">
-              <label id="label-actions" for="actions" class="field-label">実施した対応／具体的な指示内容</label>
-              <textarea
-                id="actions"
-                class="input-textarea"
-                rows="3"
-                placeholder="例）バイタル測定、患部の確認、家族・主治医への連絡、夜勤者への申し送り内容 など。"
-              ></textarea>
-              <p id="hint-actions" class="field-hint">
-                すでに行った対応や、現場職員にお願いしたい具体的な行動を書いてください。
-              </p>
-            </div>
-
-            <div class="form-group">
-              <label id="label-goal" for="goal" class="field-label">今後の対応・ゴール／報告ライン</label>
-              <textarea
-                id="goal"
-                class="input-textarea"
-                rows="3"
-                placeholder="例）どの状態になったら報告が必要か、どこまで行えば完了か を明確に。"
-              ></textarea>
-              <p id="hint-goal" class="field-hint">
-                「誰が・いつまでに・どの程度まで行えば完了か」「どこに報告するか」を書いてください。
-              </p>
-            </div>
+          <div class="form-group">
+            <label for="dialogueSeed" class="field-label">いま起きていること（1〜2行）</label>
+            <textarea
+              id="dialogueSeed"
+              class="input-textarea"
+              rows="2"
+              placeholder="例）◯◯様が食事を全量拒否されました。嘔吐はなく、水分は少量なら摂取できますが、いつもより表情が乏しく元気がありません。"
+            ></textarea>
+            <p class="field-hint" id="dialogueHint">
+              例のように、ざっくりで構いません。難しく考えなくてOKです。
+            </p>
           </div>
-        </section>
 
-        <!-- STEP3 追加情報（違和感のみ） -->
-        <section class="card">
-          <div class="card-header">
-            <span class="step-badge">STEP 3</span>
-            <h2 class="card-title">追加情報（任意）</h2>
+          <div class="actions actions-right">
+            <button type="button" id="btnStartDialogue" class="btn btn-primary">
+              AIに質問してもらう
+            </button>
           </div>
-          <div class="card-body">
-            <div class="form-group">
-              <label for="concern" class="field-label">職員として感じた違和感・気になる点</label>
-              <textarea
-                id="concern"
-                class="input-textarea"
-                rows="3"
-                placeholder="例）いつもより会話量が少ない、反応が遅い、普段と違う訴えがある など。"
-              ></textarea>
-              <p id="hint-concern" class="field-hint">
-                「なんとなくいつもと違う」「気になっていること」があれば、遠慮なく書いてください。
-              </p>
-            </div>
-          </div>
-        </section>
 
-        <!-- ボタン群 -->
-        <section class="card card-actions">
-          <div class="card-body">
-            <div class="actions actions-stack">
-              <button type="button" id="btnGenerate" class="btn btn-secondary">
-                AI用の文章を作る
+          <div id="dialogueArea" class="dialogue-log">
+            <!-- AIの質問と職員の回答が積み上がる -->
+          </div>
+
+          <div id="dialogueAnswerArea" class="dialogue-answer-area" style="display:none;">
+            <label for="dialogueAnswerInput" class="field-label">AIからの質問への回答</label>
+            <textarea
+              id="dialogueAnswerInput"
+              class="input-textarea"
+              rows="2"
+              placeholder="ここに回答を入力して「回答を送信」を押してください。"
+            ></textarea>
+            <div class="actions">
+              <button type="button" id="btnSendAnswer" class="btn btn-secondary">
+                回答を送信
               </button>
-              <button type="button" id="btnEvaluate" class="btn btn-primary">
-                管理者目線でチェックしてもらう
+              <button type="button" id="btnFinishDialogue" class="btn btn-outline">
+                この内容で報告文を作成
               </button>
             </div>
+          </div>
+
+        </section>
+
+        <!-- エラーメッセージ（共通） -->
+        <section class="card">
+          <div class="card-body">
             <p id="errorMessage" class="error-message" style="display:none;"></p>
           </div>
         </section>
       </div>
 
-      <!-- 右カラム：出力エリア -->
+      <!-- 右カラム：STEP3 出力 -->
       <div class="column column-right">
-        <!-- ローカルスコア -->
+        <!-- 入力充実度 -->
         <section class="card">
           <div class="card-header">
-            <h2 class="card-title">入力充実度（ローカルスコア）</h2>
+            <span class="step-badge">STEP 3</span>
+            <h2 class="card-title">出力・フィードバック</h2>
           </div>
           <div class="card-body">
             <div class="local-score">
@@ -332,14 +188,14 @@
         <!-- AIに渡す文章 -->
         <section class="card">
           <div class="card-header">
-            <h2 class="card-title">AIに渡す文章（施設内申し送り・他システム転記用）</h2>
+            <h2 class="card-title">施設内共有向けの文章</h2>
           </div>
           <div class="card-body">
             <pre id="generatedReport" class="generated-report"></pre>
           </div>
         </section>
 
-        <!-- AIフィードバック（管理者目線）＋トグル -->
+        <!-- 管理者目線フィードバック ＋ 新人トグル -->
         <section class="card">
           <div class="card-header">
             <h2 class="card-title">AIからの管理者目線フィードバック</h2>
@@ -360,7 +216,7 @@
           </div>
         </section>
 
-        <!-- AIによる書き直し例（全文） -->
+        <!-- 書き直し全文 -->
         <section class="card">
           <div class="card-header">
             <h2 class="card-title">AIによる書き直し例（全文）</h2>
@@ -373,36 +229,30 @@
           </div>
         </section>
 
-        <!-- AIが整えた文章カード（編集用） -->
+        <!-- 編集可能なAI文章 -->
         <section class="card" id="aiRewriteCard" style="display:none;">
           <div class="card-header">
             <h2 class="card-title">AIが整えた文章（編集して使えます）</h2>
           </div>
           <div class="card-body">
-            <p class="card-description">
-              そのままコピーして他システムに貼り付けても、ここで微修正してから使ってもOKです。
-            </p>
             <textarea id="aiRewriteText" class="output-textarea" rows="10"></textarea>
             <div class="actions">
               <button type="button" id="btnCopyRewrite" class="btn btn-secondary">
                 この文章をコピーする
               </button>
               <button type="button" id="btnApplyRewrite" class="btn btn-outline">
-                上の「AIに渡す文章」に反映する
+                上の共有文章に反映する
               </button>
             </div>
           </div>
         </section>
 
-        <!-- 短い申し送り用（3行バージョン） -->
+        <!-- 3行要約 -->
         <section class="card" id="aiShortCard" style="display:none;">
           <div class="card-header">
             <h2 class="card-title">短い申し送り用（3行バージョン）</h2>
           </div>
           <div class="card-body">
-            <p class="card-description">
-              夜勤・引き継ぎ・口頭申し送りでそのまま使える、要点だけの3行です。
-            </p>
             <textarea id="aiShortText" class="output-textarea" rows="3"></textarea>
             <div class="actions">
               <button type="button" id="btnCopyShort" class="btn btn-secondary">
@@ -412,15 +262,12 @@
           </div>
         </section>
 
-        <!-- 新人向けポイント（教育用） -->
+        <!-- 新人向けポイント -->
         <section class="card" id="educationCard" style="display:none;">
           <div class="card-header">
             <h2 class="card-title">新人向けポイント（教育用メモ）</h2>
           </div>
           <div class="card-body">
-            <p class="card-description">
-              このケースで新人さんが押さえておくと良い「専門表現・観察ポイント・対応・報告ライン・危険サイン」などのまとめです。
-            </p>
             <textarea id="educationText" class="output-textarea" rows="8"></textarea>
             <div class="actions">
               <button type="button" id="btnCopyEducation" class="btn btn-secondary">
