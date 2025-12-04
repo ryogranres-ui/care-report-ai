@@ -61,12 +61,18 @@ const aiRewriteText = el("aiRewriteText");
 const aiShortCard = el("aiShortCard");
 const aiShortText = el("aiShortText");
 
+// Education
+const toggleEducation = el("toggleEducation");
+const educationCard = el("educationCard");
+const educationText = el("educationText");
+
 // Buttons
 const btnGenerate = el("btnGenerate");
 const btnEvaluate = el("btnEvaluate");
 const btnCopyRewrite = el("btnCopyRewrite");
 const btnApplyRewrite = el("btnApplyRewrite");
 const btnCopyShort = el("btnCopyShort");
+const btnCopyEducation = el("btnCopyEducation");
 
 // Error
 const errorMessageEl = el("errorMessage");
@@ -130,7 +136,7 @@ const MODE_CONFIG = {
   instruction: {
     name: "指示モード",
     description:
-      "看護師・管理者・リーダーが、現場職員に誤解なく伝わる指示文を作成します。",
+      "看護師・管理者・リーダーが、現場職員に誤解なく伝わる指示文を作成します。（※ヒアリングは共有モード向けに最適化されています）",
     labels: {
       summary: "指示の概要",
       details: "背景・理由",
@@ -217,6 +223,9 @@ function resetOutputs() {
 
   aiShortCard.style.display = "none";
   aiShortText.value = "";
+
+  educationCard.style.display = "none";
+  educationText.value = "";
 
   generatedReportEl.textContent = "";
 
@@ -508,15 +517,17 @@ async function callAiEvaluate(payload) {
       throw new Error(data.error || "AI応答でエラーが発生しました。");
     }
 
-    // 質問生成モードの場合はここで終了
+    // 質問生成モードの場合はここで結果を返す
     if (payload.flow === "question") {
       return data;
     }
 
-    const { aiScore, feedbackText, rewriteText, shortText } = data;
+    const { aiScore, feedbackText, rewriteText, shortText, educationText: edu } =
+      data;
 
     aiScoreValueEl.textContent = aiScore != null ? aiScore : "-";
 
+    // フィードバック本体
     aiFeedbackEl.innerHTML = "";
     (feedbackText || "")
       .split(/\n{2,}/)
@@ -528,6 +539,7 @@ async function callAiEvaluate(payload) {
         aiFeedbackEl.appendChild(p);
       });
 
+    // 書き直し
     aiRewriteEl.textContent = rewriteText || "";
     if (rewriteText) {
       aiRewriteCard.style.display = "block";
@@ -537,12 +549,26 @@ async function callAiEvaluate(payload) {
       aiRewriteText.value = "";
     }
 
+    // 3行要約
     if (shortText && shortText.trim()) {
       aiShortCard.style.display = "block";
       aiShortText.value = shortText.trim();
     } else {
       aiShortCard.style.display = "none";
       aiShortText.value = "";
+    }
+
+    // 新人向けポイント
+    if (edu && edu.trim()) {
+      educationText.value = edu.trim();
+      if (toggleEducation.checked) {
+        educationCard.style.display = "block";
+      } else {
+        educationCard.style.display = "none";
+      }
+    } else {
+      educationText.value = "";
+      educationCard.style.display = "none";
     }
   } catch (err) {
     errorMessageEl.style.display = "block";
@@ -639,6 +665,7 @@ btnEvaluate.addEventListener("click", () => {
       localScore: score,
       missingRequired,
       missingOptional,
+      includeEducation: toggleEducation.checked,
     });
   } catch (err) {
     errorMessageEl.style.display = "block";
@@ -664,6 +691,7 @@ btnQuickGenerate.addEventListener("click", () => {
       localScore: score,
       missingRequired,
       missingOptional,
+      includeEducation: toggleEducation.checked,
     });
   } catch (err) {
     errorMessageEl.style.display = "block";
@@ -759,6 +787,7 @@ btnFinishDialogue.addEventListener("click", () => {
       localScore: score,
       missingRequired,
       missingOptional,
+      includeEducation: toggleEducation.checked,
     });
   } catch (err) {
     errorMessageEl.style.display = "block";
@@ -789,6 +818,26 @@ btnCopyShort.addEventListener("click", async () => {
     }
   } catch (err) {
     console.error(err);
+  }
+});
+
+// 新人向けポイントコピー
+btnCopyEducation.addEventListener("click", async () => {
+  try {
+    if (educationText.value.trim()) {
+      await navigator.clipboard.writeText(educationText.value);
+    }
+  } catch (err) {
+    console.error(err);
+  }
+});
+
+// 新人向けトグル変更時
+toggleEducation.addEventListener("change", () => {
+  if (toggleEducation.checked && educationText.value.trim()) {
+    educationCard.style.display = "block";
+  } else {
+    educationCard.style.display = "none";
   }
 });
 

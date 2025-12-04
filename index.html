@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8" />
-  <title>Care Report AI｜共有・報告 & 指示サポート</title>
+  <title>Care Report AI｜共有・報告サポート</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="stylesheet" href="./app.css" />
 </head>
@@ -12,14 +12,14 @@
       <div>
         <h1 class="app-title">Care Report AI</h1>
         <p class="app-subtitle">
-          介護現場の「共有・報告」と「指示」を、かんたん＆高品質にするAIツール
+          介護現場の「共有・報告」を、かんたん＆高品質にするAIツール
         </p>
       </div>
       <div class="mode-switch">
         <label for="modeSelect" class="mode-label">モード</label>
         <select id="modeSelect" class="mode-select">
           <option value="report">共有・報告モード</option>
-          <option value="instruction">指示モード</option>
+          <option value="instruction">指示モード（※今後拡張予定）</option>
         </select>
       </div>
     </div>
@@ -33,7 +33,7 @@
       <!-- 左カラム：入力エリア -->
       <div class="column column-left">
 
-        <!-- 🆕 AIヒアリングモード -->
+        <!-- AIヒアリングモード -->
         <section class="card card-dialogue">
           <div class="card-header">
             <span class="step-badge step-badge-alt">ASK</span>
@@ -50,7 +50,7 @@
               id="dialogueSeed"
               class="input-textarea"
               rows="2"
-              placeholder="例）◯◯様がトイレから戻る途中でふらついてベッド手前で膝をつきました。頭は打っていませんが、少し痛みを訴えています。"
+              placeholder="例）◯◯様がトイレから戻る途中でふらつきがあり、ベッド手前で膝をつくように倒れました。頭部打撲はなく、少し膝の痛みを訴えています。"
             ></textarea>
             <p class="field-hint" id="dialogueHint">
               例のように、ざっくりで構いません。難しく考えなくてOKです。
@@ -64,7 +64,7 @@
           </div>
 
           <div id="dialogueArea" class="dialogue-log">
-            <!-- ここにAIの質問と職員の回答が積み上がる -->
+            <!-- AIの質問と職員の回答が積み上がる -->
           </div>
 
           <div id="dialogueAnswerArea" class="dialogue-answer-area" style="display:none;">
@@ -141,7 +141,7 @@
           </div>
         </section>
 
-        <!-- STEP1 基本情報 -->
+        <!-- STEP1 基本情報（＋折りたたみバイタル） -->
         <section class="card">
           <div class="card-header">
             <span class="step-badge">STEP 1</span>
@@ -176,6 +176,36 @@
                 施設内のどの場所で起きたか、分かる範囲で書いてください。
               </p>
             </div>
+
+            <!-- 折りたたみバイタル -->
+            <details class="vital-details">
+              <summary class="vital-summary">バイタル（必要時のみ）</summary>
+              <div class="vital-grid">
+                <div class="vital-item">
+                  <span class="vital-label">体温（BT）</span>
+                  <input id="tempInput" type="number" step="0.1" class="input-text" placeholder="例）37.8" />
+                </div>
+                <div class="vital-item">
+                  <span class="vital-label">血圧（収縮）</span>
+                  <input id="bpSysInput" type="number" class="input-text" placeholder="例）132" />
+                </div>
+                <div class="vital-item">
+                  <span class="vital-label">血圧（拡張）</span>
+                  <input id="bpDiaInput" type="number" class="input-text" placeholder="例）74" />
+                </div>
+                <div class="vital-item">
+                  <span class="vital-label">脈拍（P）</span>
+                  <input id="pulseInput" type="number" class="input-text" placeholder="例）88" />
+                </div>
+                <div class="vital-item">
+                  <span class="vital-label">SpO2</span>
+                  <input id="spo2Input" type="number" class="input-text" placeholder="例）97" />
+                </div>
+              </div>
+              <p id="hint-vital" class="field-hint">
+                測定している場合のみ記入してください。数値がない場合は空欄で構いません。
+              </p>
+            </details>
           </div>
         </section>
 
@@ -240,42 +270,13 @@
           </div>
         </section>
 
-        <!-- STEP3 追加情報 -->
+        <!-- STEP3 追加情報（違和感のみ） -->
         <section class="card">
           <div class="card-header">
             <span class="step-badge">STEP 3</span>
             <h2 class="card-title">追加情報（任意）</h2>
           </div>
           <div class="card-body">
-            <div class="form-group">
-              <label class="field-label">バイタル</label>
-              <div class="vital-grid">
-                <div class="vital-item">
-                  <span class="vital-label">体温（BT）</span>
-                  <input id="tempInput" type="number" step="0.1" class="input-text" placeholder="例）37.8" />
-                </div>
-                <div class="vital-item">
-                  <span class="vital-label">血圧（収縮）</span>
-                  <input id="bpSysInput" type="number" class="input-text" placeholder="例）132" />
-                </div>
-                <div class="vital-item">
-                  <span class="vital-label">血圧（拡張）</span>
-                  <input id="bpDiaInput" type="number" class="input-text" placeholder="例）74" />
-                </div>
-                <div class="vital-item">
-                  <span class="vital-label">脈拍（P）</span>
-                  <input id="pulseInput" type="number" class="input-text" placeholder="例）88" />
-                </div>
-                <div class="vital-item">
-                  <span class="vital-label">SpO2</span>
-                  <input id="spo2Input" type="number" class="input-text" placeholder="例）97" />
-                </div>
-              </div>
-              <p id="hint-vital" class="field-hint">
-                測定している場合のみ記入してください。数値がない場合は空欄で構いません。
-              </p>
-            </div>
-
             <div class="form-group">
               <label for="concern" class="field-label">職員として感じた違和感・気になる点</label>
               <textarea
@@ -338,7 +339,7 @@
           </div>
         </section>
 
-        <!-- AIフィードバック -->
+        <!-- AIフィードバック（管理者目線）＋トグル -->
         <section class="card">
           <div class="card-header">
             <h2 class="card-title">AIからの管理者目線フィードバック</h2>
@@ -348,6 +349,12 @@
               <span class="ai-score-label">AIスコア</span>
               <span class="ai-score-value" id="aiScoreValue">-</span>
               <span class="ai-score-unit">点 / 100</span>
+            </div>
+            <div class="education-toggle">
+              <label>
+                <input type="checkbox" id="toggleEducation" checked />
+                新人向けポイントを表示する
+              </label>
             </div>
             <div id="aiFeedback" class="ai-feedback"></div>
           </div>
@@ -400,6 +407,24 @@
             <div class="actions">
               <button type="button" id="btnCopyShort" class="btn btn-secondary">
                 この3行をコピーする
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <!-- 新人向けポイント（教育用） -->
+        <section class="card" id="educationCard" style="display:none;">
+          <div class="card-header">
+            <h2 class="card-title">新人向けポイント（教育用メモ）</h2>
+          </div>
+          <div class="card-body">
+            <p class="card-description">
+              このケースで新人さんが押さえておくと良い「専門表現・観察ポイント・対応・報告ライン・危険サイン」などのまとめです。
+            </p>
+            <textarea id="educationText" class="output-textarea" rows="8"></textarea>
+            <div class="actions">
+              <button type="button" id="btnCopyEducation" class="btn btn-secondary">
+                この新人向けポイントをコピーする
               </button>
             </div>
           </div>
