@@ -95,7 +95,8 @@
                 </div>
               </div>
               <p id="hint-vital" class="field-hint">
-                測定している場合のみ記入してください。数値がない場合は空欄で構いません。
+                発熱・呼吸苦・胸痛・血圧の大きな変動など、体調の変化がある場合はできる範囲で記入してください。
+                測定していない場合は空欄のままで構いません。
               </p>
             </details>
           </div>
@@ -147,7 +148,9 @@
               <button type="button" id="btnSendAnswer" class="btn btn-secondary">
                 回答を送信
               </button>
-              <button type="button" id="btnFinishDialogue" class="btn btn-outline">
+            </div>
+            <div class="actions">
+              <button type="button" id="btnFinishDialogue" class="btn btn-outline" disabled>
                 この内容で報告文を作成
               </button>
             </div>
@@ -195,19 +198,28 @@
           </div>
         </section>
 
-        <!-- 管理者目線フィードバック ＋ 新人トグル -->
+        <!-- フィードバック + 重要ポイント -->
         <section class="card">
           <div class="card-header">
-            <h2 class="card-title">AIからの管理者目線フィードバック</h2>
+            <h2 class="card-title">AIからのフィードバック＆重要ポイント</h2>
           </div>
           <div class="card-body">
             <div class="education-toggle">
               <label>
                 <input type="checkbox" id="toggleEducation" checked />
-                新人向けポイントを表示する
+                重要ポイント（観察・対応の参考に）を表示する
               </label>
             </div>
             <div id="aiFeedback" class="ai-feedback"></div>
+            <div id="educationBlock" class="education-block" style="display:none;">
+              <label class="field-label">重要ポイント（観察・対応のために）</label>
+              <textarea id="educationText" class="output-textarea" rows="8"></textarea>
+              <div class="actions">
+                <button type="button" id="btnCopyEducation" class="btn btn-secondary">
+                  この重要ポイントをコピーする
+                </button>
+              </div>
+            </div>
           </div>
         </section>
 
@@ -244,20 +256,25 @@
           </div>
         </section>
 
-        <!-- 新人向けポイント -->
-        <section class="card" id="educationCard" style="display:none;">
+        <!-- 医師へ報告する時に使えるまとめ -->
+        <section class="card" id="doctorSummaryCard" style="display:none;">
           <div class="card-header">
-            <h2 class="card-title">新人向けポイント（教育用メモ）</h2>
+            <h2 class="card-title">医師へ報告する時に使えるまとめ（医療機関向け）</h2>
           </div>
           <div class="card-body">
-            <textarea id="educationText" class="output-textarea" rows="8"></textarea>
+            <p class="field-hint">
+              受診相談・指示確認など、医師や医療機関に報告する際に参考として使用してください。
+              内容は自由に追記・修正できます。
+            </p>
+            <textarea id="doctorSummaryText" class="output-textarea" rows="8"></textarea>
             <div class="actions">
-              <button type="button" id="btnCopyEducation" class="btn btn-secondary">
-                この新人向けポイントをコピーする
+              <button type="button" id="btnCopyDoctor" class="btn btn-secondary">
+                この内容をコピーする（医師報告用）
               </button>
             </div>
           </div>
         </section>
+
       </div>
     </section>
   </main>

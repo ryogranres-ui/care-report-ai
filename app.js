@@ -43,8 +43,13 @@ const aiShortCard = el("aiShortCard");
 const aiShortText = el("aiShortText");
 
 const toggleEducation = el("toggleEducation");
-const educationCard = el("educationCard");
+const educationBlock = el("educationBlock");
 const educationText = el("educationText");
+
+// 医師向けまとめ
+const doctorSummaryCard = el("doctorSummaryCard");
+const doctorSummaryText = el("doctorSummaryText");
+const btnCopyDoctor = el("btnCopyDoctor");
 
 // ボタン（コピー系）
 const btnCopyRewrite = el("btnCopyRewrite");
@@ -65,7 +70,7 @@ const dialogueState = {
 };
 
 // ---------------------------------------------
-// モード説明（今は説明だけ）
+// モード説明
 // ---------------------------------------------
 const MODE_CONFIG = {
   report: {
@@ -105,8 +110,11 @@ function resetOutputs() {
   aiShortCard.style.display = "none";
   aiShortText.value = "";
 
-  educationCard.style.display = "none";
   educationText.value = "";
+  educationBlock.style.display = "none";
+
+  doctorSummaryText.value = "";
+  doctorSummaryCard.style.display = "none";
 
   errorMessageEl.style.display = "none";
   errorMessageEl.textContent = "";
@@ -185,6 +193,9 @@ function clearDialogue() {
   dialogueAnswerInput.value = "";
   dialogueHintEl.textContent =
     "例のように、ざっくりで構いません。難しく考えなくてOKです。";
+
+  // 報告文作成ボタンを無効に戻す
+  btnFinishDialogue.disabled = true;
 }
 
 function appendQuestion(qObj) {
@@ -269,6 +280,7 @@ btnStartDialogue.addEventListener("click", async () => {
       mode: modeKey,
       seedText: seed,
       userName: userNameInput.value.trim(),
+      vitalText: buildVital(),
     });
 
     const questions = data.questions || [];
@@ -308,16 +320,19 @@ btnSendAnswer.addEventListener("click", () => {
       appendQuestion(dialogueState.questions[dialogueState.index]);
       dialogueAnswerInput.focus();
     } else {
-      // 質問終了時の案内メッセージ
+      // 質問終了時の案内メッセージ（バイタル案内はSTEP1側に集約済）
       const finalQ = {
         question:
-          "質問は以上です。この内容で報告文を作成する場合は、画面下の「この内容で報告文を作成」を押してください。\n発熱・呼吸苦・血圧の変動など体調の変化があるケースでは、STEP1の「バイタル」もできる範囲で入力しておくと安心です。",
+          "質問は以上です。この内容で報告文を作成する場合は、下の「この内容で報告文を作成」を押してください。",
         point: "",
       };
       appendQuestion(finalQ);
 
       dialogueHintEl.textContent =
         "質問は終了しました。「この内容で報告文を作成」を押すと文章が自動生成されます。";
+
+      // ここで初めて報告文作成ボタンを有効化
+      btnFinishDialogue.disabled = false;
       dialogueAnswerInput.focus();
     }
   } catch (err) {
@@ -329,6 +344,10 @@ btnSendAnswer.addEventListener("click", () => {
 // 報告文作成（buildReport → fullEvaluate）
 btnFinishDialogue.addEventListener("click", async () => {
   try {
+    if (btnFinishDialogue.disabled) {
+      return; // 質問が終わっていない状態では動かさない
+    }
+
     errorMessageEl.style.display = "none";
     errorMessageEl.textContent = "";
 
@@ -362,7 +381,7 @@ btnFinishDialogue.addEventListener("click", async () => {
     // ② ローカルスコア
     const localScore = evaluateLocal();
 
-    // ③ fullEvaluate
+    // ③ fullEvaluate（フィードバック＋書き直し＋3行要約＋重要ポイント＋医師向け）
     const evalRes = await callApi({
       flow: "fullEvaluate",
       mode: modeKey,
@@ -377,6 +396,7 @@ btnFinishDialogue.addEventListener("click", async () => {
       rewriteText,
       shortText,
       educationText: edu,
+      doctorText,
     } = evalRes;
 
     // 最終版：書き直しがあればそれを優先
@@ -385,7 +405,7 @@ btnFinishDialogue.addEventListener("click", async () => {
 
     generatedReportEl.textContent = finalText;
 
-    // フィードバック本文
+    // フィードバック本文（①〜④のみ）
     aiFeedbackEl.innerHTML = "";
     (feedbackText || "")
       .split(/\n{2,}/)
@@ -415,17 +435,26 @@ btnFinishDialogue.addEventListener("click", async () => {
       aiShortText.value = "";
     }
 
-    // 新人向けポイント
+    // 重要ポイント（旧：新人向け）
     if (edu && edu.trim()) {
       educationText.value = edu.trim();
       if (toggleEducation.checked) {
-        educationCard.style.display = "block";
+        educationBlock.style.display = "block";
       } else {
-        educationCard.style.display = "none";
+        educationBlock.style.display = "none";
       }
     } else {
       educationText.value = "";
-      educationCard.style.display = "none";
+      educationBlock.style.display = "none";
+    }
+
+    // 医師向けまとめ
+    if (doctorText && doctorText.trim()) {
+      doctorSummaryText.value = doctorText.trim();
+      doctorSummaryCard.style.display = "block";
+    } else {
+      doctorSummaryText.value = "";
+      doctorSummaryCard.style.display = "none";
     }
   } catch (err) {
     errorMessageEl.style.display = "block";
@@ -461,7 +490,7 @@ btnCopyShort.addEventListener("click", async () => {
   }
 });
 
-// 新人向けポイントコピー
+// 重要ポイントコピー
 btnCopyEducation.addEventListener("click", async () => {
   try {
     if (educationText.value.trim()) {
@@ -472,16 +501,27 @@ btnCopyEducation.addEventListener("click", async () => {
   }
 });
 
-// 新人向けトグル：質問側のPOINT表示とカード表示を切替
+// 医師向けまとめコピー
+btnCopyDoctor.addEventListener("click", async () => {
+  try {
+    if (doctorSummaryText.value.trim()) {
+      await navigator.clipboard.writeText(doctorSummaryText.value);
+    }
+  } catch (e) {
+    console.error(e);
+  }
+});
+
+// 重要ポイントトグル：質問側のPOINT表示とブロック表示を切替
 toggleEducation.addEventListener("change", () => {
   const show = toggleEducation.checked;
   document.querySelectorAll(".dialogue-point").forEach((el) => {
     el.style.display = show ? "block" : "none";
   });
   if (show && educationText.value.trim()) {
-    educationCard.style.display = "block";
+    educationBlock.style.display = "block";
   } else {
-    educationCard.style.display = "none";
+    educationBlock.style.display = "none";
   }
 });
 
