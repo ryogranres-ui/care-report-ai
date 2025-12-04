@@ -313,18 +313,31 @@ btnSendAnswer.addEventListener("click", () => {
     const answer = dialogueAnswerInput.value.trim();
     if (!answer) return;
 
-    const currentQ = dialogueState.questions[dialogueState.index];
-    dialogueState.qa.push({ question: currentQ.question, answer });
+    const currentIdx = dialogueState.index;
+    const questions = dialogueState.questions;
+    const currentQ = questions[currentIdx];
 
+    // Q&A を保存
+    dialogueState.qa.push({
+      question: currentQ.question,
+      answer,
+    });
+
+    // 画面に回答を追加
     appendAnswer(answer);
     dialogueAnswerInput.value = "";
 
-    dialogueState.index += 1;
-    if (dialogueState.index < dialogueState.questions.length) {
-      appendQuestion(dialogueState.questions[dialogueState.index]);
+    // 次の質問へ
+    dialogueState.index = currentIdx + 1;
+
+    const isLastRealQuestion = dialogueState.index >= questions.length;
+
+    if (!isLastRealQuestion) {
+      // まだ質問が残っている場合 → 次の質問を表示
+      appendQuestion(questions[dialogueState.index]);
       dialogueAnswerInput.focus();
     } else {
-      // 質問終了時の案内メッセージ
+      // すべての質問が終わった場合 → 終了メッセージ＋ボタン有効化
       const finalQ = {
         question:
           "質問は以上です。この内容で報告文を作成する場合は、下の「この内容で報告文を作成」を押してください。",

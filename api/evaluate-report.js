@@ -68,6 +68,11 @@ export default async function handler(req, res) {
 - 現場職員が答えやすい自然な日本語
 - POINT は1〜2文で簡潔に
 - 医療的な危険サインが疑われる場合は、観察すべきポイントも意識して質問を組み立てる
+- basicInfo や vitalText に書かれている内容と同じことは質問しない。
+- 特に体温・血圧・脈拍・SpO2 は、すでに数値が分かっている場合
+  「普段との比較」や「変化の経過」にフォーカスして質問する。
+- seedText や過去の回答に含まれている事実を、言い方だけ変えて聞き直さない。
+
       `.trim();
 
       const userPrompt = `
