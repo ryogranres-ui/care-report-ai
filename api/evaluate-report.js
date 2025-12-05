@@ -1,5 +1,5 @@
 // api/evaluate-report.js
-// Care Report AI - evaluate-report.js (Vercel serverless)
+// Care Report AI 用 Vercel サーバレス関数（フル書き換え版）
 
 import OpenAI from "openai";
 
@@ -7,358 +7,430 @@ const client = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-// ------------ 共通ヘルパー ------------
+// 質問生成・評価用（賢いがやや高コスト）
+const QUESTION_MODEL =
+  process.env.OPENAI_QUESTION_MODEL || "gpt-4.1";
 
-function safeBody(req) {
-  if (!req.body) return {};
-  if (typeof req.body === "string") {
-    try {
-      return JSON.parse(req.body);
-    } catch {
-      return {};
-    }
-  }
-  return req.body || {};
-}
+// 整形・軽いタスク用（安いモデル。今後分離したいとき用）
+const MINI_MODEL =
+  process.env.OPENAI_MINI_MODEL || "gpt-4o-mini";
 
-async function callOpenAI(messages) {
-  const resp = await client.chat.completions.create({
-    model: "gpt-4o-mini",
-    temperature: 0.4,
-    messages,
+// --------- 共通ユーティリティ ---------
+
+/**
+ * Chat Completion を呼び出し、JSONを返す。
+ * モデルの出力が ```json ... ``` などになっていてもパースできるように調整。
+ */
+async function callJsonChat({ model, system, user, temperature = 0.4 }) {
+  const completion = await client.chat.completions.create({
+    model,
+    temperature,
+    messages: [
+      { role: "system", content: system },
+      { role: "user", content: user },
+    ],
   });
-  const content = resp.choices?.[0]?.message?.content;
-  if (!content) throw new Error("AI からの応答が取得できませんでした。");
-  return content;
-}
 
-function extractScore(text) {
-  const m = text.match(/スコア[:：]\s*(\d{1,3})/);
-  if (!m) return null;
-  const n = parseInt(m[1], 10);
-  if (Number.isNaN(n)) return null;
-  return Math.max(0, Math.min(100, n));
-}
+  const raw = completion.choices?.[0]?.message?.content || "{}";
 
-function extractSection(text, fromLabel, toLabel) {
-  const fromIdx = text.indexOf(fromLabel);
-  if (fromIdx === -1) return "";
-  const start = fromIdx + fromLabel.length;
-  const rest = text.slice(start);
-  if (!toLabel) return rest.trim();
-  const toIdx = rest.indexOf(toLabel);
-  if (toIdx === -1) return rest.trim();
-  return rest.slice(0, toIdx).trim();
-}
-
-// ------------ ハンドラ本体 ------------
-
-export default async function handler(req, res) {
-  if (req.method !== "POST") {
-    res.setHeader("Allow", ["POST"]);
-    return res.status(405).json({ error: "Method Not Allowed" });
-  }
-
-  const body = safeBody(req);
-
-  const flow = body.flow || "fullEvaluate";
-  const mode = body.mode || "report";
-
-  // 既存フロントとの互換性のために、basicInfo / vital の別名も拾う
-  const basicInfoText =
-    body.basicInfoText ||
-    body.basicInfo ||
-    body.basicInfoSummary ||
-    body.basic ||
-    "";
-
-  const vitalText =
-    body.vitalText ||
-    body.vitals ||
-    body.vitalSummary ||
-    body.vital ||
-    "";
-
-  const seedText = body.seedText || "";
-  const reportText = body.reportText || "";
-  const localScore = body.localScore ?? null;
-  const missingRequired = body.missingRequired || [];
-  const missingOptional = body.missingOptional || [];
-  const dialogueQA = Array.isArray(body.dialogueQA) ? body.dialogueQA : [];
+  const jsonText = extractJson(raw);
 
   try {
-    // ------------------------------------------------
-    // 1) 質問生成フロー generateQuestions
-    // ------------------------------------------------
-    if (flow === "generateQuestions") {
-      const systemForQuestions = `
-あなたは日本の介護現場で使う「質問設計AIコーチ」です。
+    return JSON.parse(jsonText);
+  } catch (err) {
+    console.error("JSON parse error", err, "raw:", raw);
+    throw new Error("AIからのJSONが正しく読み取れませんでした。");
+  }
+}
 
-【受け取る情報】
-- seedText: 職員が書いた「いま起きていること（1〜2行）」です。
-- basicInfoText: 作成者名・対象者名・日時・場所などの基本情報です。
-- vitalText: 体温・血圧・脈拍・SpO2 などのバイタルです。
+/**
+ * テキストの中から JSON 部分だけを抜き出す。
+ * 最初の { 〜 最後の } を取得。
+ */
+function extractJson(text) {
+  const first = text.indexOf("{");
+  const last = text.lastIndexOf("}");
+  if (first === -1 || last === -1 || last <= first) {
+    return text; // ダメ元でそのまま返す
+  }
+  return text.slice(first, last + 1);
+}
 
-【絶対ルール】
+/**
+ * リクエストボディの基本バリデーション
+ */
+function ensurePost(req, res) {
+  if (req.method !== "POST") {
+    res.status(405).json({ ok: false, error: "Method not allowed" });
+    return false;
+  }
+  if (!process.env.OPENAI_API_KEY) {
+    res.status(500).json({
+      ok: false,
+      error: "OPENAI_API_KEY が設定されていません。",
+    });
+    return false;
+  }
+  return true;
+}
 
-1. basicInfoText に「日時」「場所」「対象者」が含まれている場合、
-   原則として「いつ・どこで・誰に起きたか」を確認する質問は作らないでください。
-   これらは既に分かっている前提で話を進めます。
+// --------- flow: classifyEvent ---------
 
-2. seedText と basicInfoText にまったく日時・場所・対象者が無い場合だけ、
-   最初の 1問目に限り「いつ・どこで・誰に」をまとめて確認しても構いません。
+/**
+ * summary + basicInfo からイベント種別を分類する。
+ * A: 事故・急な体調変化
+ * B: じわじわした体調や様子の変化
+ * C: 面会・行事・日常のようす（ポジティブ〜中立）
+ * D: 物品・設備・シフトなどの業務連絡
+ * E: よく分からない／複数が混ざる（AIにおまかせ）
+ */
+async function handleClassifyEvent(body) {
+  const { summary, basicInfo = {}, manualCategory = null } = body || {};
 
-3. 質問は 3〜7問程度。
-   - seedText が具体的なら少なめ
-   - seedText があいまいなら、抜けている重要情報だけを補う
+  if (!summary || typeof summary !== "string") {
+    throw new Error("summary が必要です。");
+  }
 
-4. すでに basicInfoText や vitalText に書いてある内容を、
-   言い回しだけ変えて繰り返し質問しないこと。
-   どうしても確認したい場合は「普段との違い」「変化の程度」に焦点を当ててください。
+  const system = `
+あなたは日本の介護施設向けの報告支援ツールのアシスタントです。
+入力される内容を読み、次の5分類のいずれかに判定します。
 
-5. 各質問には、現場職員の学びになるように
-   「POINT：〜〜〜」という形で「なぜその質問が大事か」を必ず付けてください。
+A: 事故・急な体調変化
+  - 例: 転倒, 転落, 誤嚥疑い, 発熱, SpO2低下, 呼吸苦, 胸痛, 嘔吐, 出血, 急な血圧変動 など
+B: じわじわした体調や様子の変化
+  - 例: 食事量低下, 歩行のふらつき, 夜間不眠, ナースコール増加, 表情が暗い/不穏 など
+C: 面会・行事・日常のようす（ポジティブ〜中立）
+  - 例: 家族面会, レクリエーション, 外出, 散歩, 誕生日会, 好きな食事を食べた など
+D: 物品・設備・シフトなどの業務連絡
+  - 例: 物品不足, 設備故障, 水漏れ, シフト変更, マニュアル変更 など
+E: 上記に当てはまらない／複数が混ざる／分類に迷うケース
 
-6. 出力は必ず次の JSON 形式のみとし、日本語の文章は含めないこと。
+【重要なルール】
+- 医療的リスクが高いと思われるキーワード（転倒・嘔吐・SpO2低下・胸痛など）があれば、
+  職員の選択にかかわらず A「事故・急な体調変化」を優先的に選びます。
+- 職員が選んだ manualCategory が与えられている場合、
+  それが明らかに不適切でない限り尊重し、調整のうえで finalCategory を決めてください。
+- 返答は必ず日本語で、以下のJSON形式のみで返してください。
+`;
+
+  const userPayload = {
+    summary,
+    basicInfo,
+    manualCategory, // null または "A"〜"E"
+  };
+
+  const user = `
+以下は職員が入力した情報です（JSON）。
+
+${JSON.stringify(userPayload, null, 2)}
+
+次の形式のJSONだけを返してください:
 
 {
-  "questions": [
-    { "question": "質問文", "point": "POINT の解説" },
-    ...
-  ]
+  "finalCategory": "A" | "B" | "C" | "D" | "E",
+  "categoryLabel": "事故・急な体調変化" など日本語ラベル,
+  "reason": "その分類にした簡潔な理由"
 }
 `;
 
-      const userForQuestions = `
-【seedText】
-${seedText || "（記載なし）"}
+  const result = await callJsonChat({
+    model: QUESTION_MODEL,
+    system,
+    user,
+    temperature: 0.0,
+  });
 
-【basicInfoText】
-${basicInfoText || "（記載なし）"}
+  return {
+    ok: true,
+    ...result,
+  };
+}
 
-【vitalText】
-${vitalText || "（記載なし）"}
+// --------- flow: nextQuestion ---------
 
-このケースで報告の質を上げるために本当に必要な質問を 3〜7 個作成し、
-指定した JSON 形式で返してください。
+/**
+ * 1問ずつ次の質問を生成する。
+ * 十分情報が集まったら done: true を返し、質問を終了する。
+ */
+async function handleNextQuestion(body) {
+  const {
+    summary,
+    basicInfo = {},
+    qaLog = [],
+    eventCategory, // "A"〜"E" のどれかを想定
+  } = body || {};
+
+  if (!summary || typeof summary !== "string") {
+    throw new Error("summary が必要です。");
+  }
+
+  if (!eventCategory) {
+    throw new Error("eventCategory が必要です。");
+  }
+
+  const system = `
+あなたは日本の介護施設向けの「AIヒアリング担当」です。
+目的は「報告文を作るために、本当に必要な情報だけを、最小限の質問で集めること」です。
+
+分類:
+A: 事故・急な体調変化
+B: じわじわした体調や様子の変化
+C: 面会・行事・日常のようす
+D: 物品・設備・シフトなどの業務連絡
+E: その他／分類に迷う
+
+【絶対ルール】
+- basicInfo にすでに書かれている項目（利用者名, 日時, 場所, バイタルなど）を聞き直してはいけません。
+- summary に明確に書いてある内容を「そのまま聞き直す」ことは禁止。
+- qaLog にすでに含まれている質問内容を、言い方を変えて繰り返してはいけません。
+- 1回の呼び出しで出す質問は「1問だけ」です。
+- 十分な情報が集まったと判断したら、質問をやめて done: true を返してください。
+
+【質問の方針】
+- A（事故・急変）:
+  - 転倒: 意識レベル, 頭部打撲, 出血, 服薬（抗血小板薬など）, 直後の様子
+  - 発熱: いつから, 最大体温, 呼吸苦, 咳, 持病, 水分・食事量, 他の症状
+  - 嘔吐: 回数, 色, 量, 腹痛, 下痢, 便通, 服薬
+  - SpO2低下: 測定値, 呼吸状態, 胸痛, チアノーゼ, 安静時か動作時か
+- B（じわじわ変化）:
+  - 「いつから」「どのくらい」「日内変動」「頻度」「具体例」を深掘り。
+- C（面会・行事）:
+  - 誰が来たか, 滞在時間, 利用者の表情・発言, 家族の要望, 今後のケアのヒント。
+  - 医療的リスクがなければ、バイタルを無理に聞かない。
+- D（業務連絡）:
+  - 何が起きたか, 場所, 影響範囲, 緊急度, 誰に対応を依頼したいか。
+- E（その他）:
+  - 上記方針のうちもっとも近いものを選び、柔軟に質問。
+
+【回答形式】
+必ず次のJSON形式のみを返してください。
+
+- まだ質問が必要な場合:
+
+{
+  "done": false,
+  "question": {
+    "id": "vomit_color",
+    "label": "嘔吐の色はどのような色でしたか？",
+    "answerType": "singleChoice", // "singleChoice" | "multiChoice" | "freeText"
+    "options": [
+      "透明〜白っぽい",
+      "黄色〜胆汁様",
+      "茶色〜コーヒー残渣様",
+      "赤色・血が混じる",
+      "その他（自由入力）"
+    ],
+    "allowFreeText": true,
+    "hintForBeginner": "色によって出血や腸閉塞など重症度の判断材料になります。"
+  }
+}
+
+- もう十分な情報が集まった場合:
+
+{
+  "done": true,
+  "question": null
+}
+
+補足:
+- options が不要な自由記述質問の場合は、answerType を "freeText" にし、
+  options は空配列 [] にしてください。
 `;
 
-      const raw = await callOpenAI([
-        { role: "system", content: systemForQuestions },
-        { role: "user", content: userForQuestions },
-      ]);
+  const userPayload = {
+    eventCategory,
+    summary,
+    basicInfo,
+    qaLog,
+  };
 
-      let questions = [];
-      try {
-        const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed?.questions)) {
-          questions = parsed.questions.map((q) => ({
-            question: String(q.question || "").trim(),
-            point: String(q.point || "").trim(),
-          }));
-        }
-      } catch {
-        // JSON で返ってこなかった時の保険：行ごとパース
-        const lines = raw
-          .split("\n")
-          .map((l) => l.trim())
-          .filter(Boolean);
-        for (const line of lines) {
-          const [q, p] = line.split("POINT：");
-          if (!q) continue;
-          questions.push({
-            question: q.replace(/^[-・0-9.①-⑩]+/, "").trim(),
-            point: (p || "").trim(),
-          });
-        }
-      }
+  const user = `
+以下は現在までに集まっている情報です（JSON）。
 
-      if (!questions.length) {
-        throw new Error("質問を生成できませんでした。入力内容を見直してください。");
-      }
+${JSON.stringify(userPayload, null, 2)}
 
-      return res.status(200).json({ questions });
-    }
-
-    // ------------------------------------------------
-    // 共通：buildReport / fullEvaluate で使う評価プロンプト
-    // ------------------------------------------------
-    const modeLabel = mode === "instruction" ? "指示モード" : "共有・報告モード";
-
-    const systemForEval = `
-あなたは日本の介護施設・訪問介護における
-「報告コーチ兼リスクマネジメント担当」です。
-
-【役割】
-- 職員が入力した情報をもとに、
-  施設内共有に使える報告文・申し送り用 3 行要約・
-  重要ポイント・医師向け要約を作成します。
-- fullEvaluate フローでは、加えて管理者目線のフィードバック全文とスコアも返します。
-
-【安全上の絶対ルール】
-
-1. 事実と提案を混ぜないこと。
-   - 実際に行ったか分からない対応（冷却、受診、薬の投与、バイタル測定など）を
-     「実施した」と書いてはいけません。
-   - 職員が「実施した」と明確に書いている内容だけを
-     「実施した対応」として扱ってください。
-
-2. 職員が「まだ何もしていない」「様子見のみ」と書いている場合、
-   「実施した対応」の欄には
-   「特に実施した対応はありません（未実施）。」などと明記してください。
-
-3. 必要だと思う対応（医師への報告、受診、冷却など）は、
-   「今後の観察・対応の検討事項」または
-   「重要ポイント（観察・対応のために）」に
-   提案の形で書いてください。
-   決して「行いました」「実施しました」と書いてはいけません。
-
-4. 不足している情報は、勝手に補わず「情報不足」「記載なし」として扱ってください。
-
-【fullEvaluate フローでの出力フォーマット】
-
-① 総評（全体の評価・リスクの有無）
-
-② 曖昧表現の指摘と改善案
-
-③ 不足している情報
-
-④ 管理者・看護師として追加で確認したい点（質問リスト）
-
-⑤ 整理された施設内共有向けの文章（見出し付き）
-   ※ここでは事実のみ。提案は含めない。
-
-⑥ 夜勤・申し送り用の 3 行要約
-
-⑦ 重要ポイント（観察・対応のために）
-   - 観察すべきポイント
-   - 危険サイン（Red flag）
-   - 誰に・どのタイミングで報告すべきか  など
-
-⑧ 医師へ報告する時に使える要約（5〜8 行程度）
-   - 利用者の基本情報（イニシャル・部屋番号程度）
-   - 主訴（何のために報告するのか）
-   - 経過の要点
-   - バイタルの要点
-   - 現在の状態
-   - 医師に確認したいこと
-
-最後に「スコア：85」のように 1〜100 点で総合スコアを付けてください。
-
-【buildReport フローでの出力】
-- 上記のうち ⑤〜⑧ のみを作成してください。
-- ①〜④ は書かなくて構いません。
+上記を踏まえて、「次に聞くべき1問」または「質問終了」のどちらかを、
+指定されたJSON形式で返してください。
 `;
 
-    // buildReport / fullEvaluate 共通で渡す「材料」
-    const qaText =
-      dialogueQA.length > 0
-        ? dialogueQA
-            .map((item, idx) => {
-              const q = (item.question || "").trim();
-              const a = (item.answer || "").trim();
-              return `Q${idx + 1}：${q}\nA${idx + 1}：${a}`;
-            })
-            .join("\n\n")
-        : "（Q&A ログなし）";
+  const result = await callJsonChat({
+    model: QUESTION_MODEL,
+    system,
+    user,
+    temperature: 0.2,
+  });
 
-    const userCommon = `
-【モード】${modeLabel}
+  // 念のため shape を軽く整える
+  if (result.done === true) {
+    return {
+      ok: true,
+      done: true,
+      question: null,
+    };
+  }
 
-【基本情報】
-${basicInfoText || "（記載なし）"}
+  return {
+    ok: true,
+    done: false,
+    question: result.question,
+  };
+}
 
-【バイタル】
-${vitalText || "（記載なし）"}
+// --------- flow: fullEvaluate ---------
 
-【いま起きていること（seedText）】
-${seedText || "（記載なし）"}
+/**
+ * 事実ベースの本文(reportText)をもとに、
+ * 評価・フィードバック・整形文章・3行メモ・医師向け要約をまとめて生成。
+ *
+ * NOTE:
+ * 今は gpt-4.1 1回でまとめて生成しています。
+ * 将来的にコストをさらに下げたい場合：
+ *   - フィードバック: QUESTION_MODEL
+ *   - 文章整形: MINI_MODEL
+ * と2段階に分けてもOK。
+ */
+async function handleFullEvaluate(body) {
+  const {
+    basicInfo = {},
+    summary,
+    qaLog = [],
+    eventCategory,
+    reportText,
+  } = body || {};
 
-【職員がまとめた報告文（reportText）】
-${reportText || "（まだ作成されていない）"}
+  if (!summary || typeof summary !== "string") {
+    throw new Error("summary が必要です。");
+  }
+  if (!reportText || typeof reportText !== "string") {
+    throw new Error("reportText（事実ベース本文）が必要です。");
+  }
 
-【Q&A ログ】
-${qaText}
+  const system = `
+あなたは日本の介護施設向けの「報告文コーチ兼リライト担当」です。
+
+目的:
+- 職員が入力した「事実ベースの本文」をもとに、
+  1) 管理者・看護師視点でのフィードバック
+  2) 観察・対応の重要ポイント
+  3) 施設内共有向けに整えた文章
+  4) 夜勤・申し送り用の3行メモ
+  5) 医師へ報告するときに使える5〜8行の要約
+  を作成すること。
+
+前提:
+- reportText に書かれていることだけが「事実」です。
+- QAで「対応していない」となっている内容を、勝手に「実施した対応」と書いてはいけません。
+- 「一般的にはこうした方が良い」という内容は、あくまで「推奨事項」として別枠で触れても良いですが、
+  実際に行っていないことを、行ったように書くことは禁止です。
+
+イベント分類:
+A: 事故・急な体調変化
+B: じわじわした体調や様子の変化
+C: 面会・行事・日常のようす（ポジティブ〜中立）
+D: 物品・設備・シフトなどの業務連絡
+E: その他
+
+【重要ルール（カテゴリ別）】
+- C（面会・行事）:
+  - 原則として「良い出来事」「中立な出来事」として扱い、
+    バイタル未記載のみを理由に厳しく減点しない。
+  - コメントは「良かった点」「今後のケアに活かせる観察」に重心を置く。
+- D（業務連絡）:
+  - 利用者の状態判定は基本行わない。
+  - 「何が・どこで・どの程度・誰に対応を依頼するか」を簡潔に整理する。
+- A/B（医療リスク系）:
+  - Red flag（すぐ医師へ相談すべき状態）があれば明示。
+  - 観察ポイントと「このレベルなら施設内で経過観察」などの目安を、できる範囲で示す。
+
+スコアについて:
+- 0〜100点で、報告としての「情報の十分さ」「わかりやすさ」を評価します。
+- CやDでは、過度に厳しくする必要はありません（例えば面会記録で60〜90点程度が中心）。
+- AやBでは、重要情報の欠落が大きい場合にのみ、低い点数をつけてください。
+
+出力フォーマット:
+必ず次のJSON形式のみで返してください。
+
+{
+  "ok": true,
+  "score": 0〜100の整数,
+  "managerFeedback": "①総評...\n②良い点...\n③不足している情報...\n④確認したい点...",
+  "keyPoints": "・観察すべきポイント...\n・Red flag（すぐ報告すべき兆候）...\n・報告タイミングの目安...",
+  "improvedFacilityText": "施設内共有向けに整えた全文。敬体（です・ます調）で、見出しを簡潔に。",
+  "shortShiftNote": "夜勤・申し送り用の3行メモ。",
+  "doctorSummary": "医師へ電話／口頭で報告するときの5〜8行の要約。"
+}
 `;
 
-    // ------------------------------------------------
-    // 2) buildReport フロー：⑤〜⑧ だけ欲しい
-    // ------------------------------------------------
-    if (flow === "buildReport") {
-      const userForBuild = `
-【依頼内容】
-上記の情報をもとに、⑤〜⑧ の部分だけを作成してください。
-①〜④は書かなくて構いません。
+  const userPayload = {
+    eventCategory,
+    basicInfo,
+    summary,
+    qaLog,
+    reportText,
+  };
 
-必ず ⑤〜⑧ をこの順番で出力してください。
+  const user = `
+以下が、職員が入力した情報と、事実ベースで整理された本文です（JSON）。
+
+${JSON.stringify(userPayload, null, 2)}
+
+これをもとに、指定されたJSON形式で評価と文章を生成してください。
 `;
 
-      const full = await callOpenAI([
-        { role: "system", content: systemForEval },
-        { role: "user", content: userCommon + userForBuild },
-      ]);
+  const result = await callJsonChat({
+    model: QUESTION_MODEL,
+    system,
+    user,
+    temperature: 0.3,
+  });
 
-      // ここでは ⑤〜⑧ だけ出てくる想定だが、安全のためラベルで区切る
-      const facilityText = extractSection(full, "⑤", "⑥") || full.trim();
-      const shortSummary = extractSection(full, "⑥", "⑦");
-      const trainingPoints = extractSection(full, "⑦", "⑧");
-      const doctorSummary = extractSection(full, "⑧", null);
+  return {
+    ok: true,
+    ...result,
+  };
+}
 
-      return res.status(200).json({
-        facilityText: facilityText.trim(),
-        shortSummary: shortSummary.trim(),
-        trainingPoints: trainingPoints.trim(),
-        doctorSummary: doctorSummary.trim(),
+// --------- メインハンドラ ---------
+
+export default async function handler(req, res) {
+  if (!ensurePost(req, res)) return;
+
+  try {
+    const body = req.body || {};
+    const { flow } = body;
+
+    if (!flow) {
+      return res.status(400).json({
+        ok: false,
+        error: "flow が指定されていません。",
       });
     }
 
-    // ------------------------------------------------
-    // 3) fullEvaluate フロー：①〜⑧＋スコア
-    // ------------------------------------------------
-    const userForEval = `
-【ローカルスコア】
-${localScore != null ? `${localScore} 点` : "（スコア情報なし）"}
+    let result;
 
-【不足している可能性がある項目（フロント側チェック）】
-必須：${
-      Array.isArray(missingRequired) && missingRequired.length
-        ? missingRequired.join("、")
-        : "特になし"
+    switch (flow) {
+      case "classifyEvent":
+        result = await handleClassifyEvent(body);
+        break;
+      case "nextQuestion":
+        result = await handleNextQuestion(body);
+        break;
+      case "fullEvaluate":
+        result = await handleFullEvaluate(body);
+        break;
+      default:
+        return res.status(400).json({
+          ok: false,
+          error: `未知の flow です: ${flow}`,
+        });
     }
-任意：${
-      Array.isArray(missingOptional) && missingOptional.length
-        ? missingOptional.join("、")
-        : "特になし"
-    }
 
-上記を踏まえ、①〜⑧ まですべて作成してください。
-`;
-
-    const fullText = await callOpenAI([
-      { role: "system", content: systemForEval },
-      { role: "user", content: userCommon + userForEval },
-    ]);
-
-    const aiScore = extractScore(fullText);
-    const facilityText = extractSection(fullText, "⑤", "⑥");
-    const shortSummary = extractSection(fullText, "⑥", "⑦");
-    const trainingPoints = extractSection(fullText, "⑦", "⑧");
-    const doctorSummary = extractSection(fullText, "⑧", null);
-
-    return res.status(200).json({
-      aiScore,
-      feedbackText: fullText.trim(),
-      facilityText: (facilityText || "").trim(),
-      shortSummary: (shortSummary || "").trim(),
-      trainingPoints: (trainingPoints || "").trim(),
-      doctorSummary: (doctorSummary || "").trim(),
-    });
+    res.status(200).json(result);
   } catch (err) {
-    console.error("evaluate-report error:", err);
-    return res.status(500).json({
-      error:
-        err?.message ||
-        "サーバ側でエラーが発生しました。時間をおいて再度お試しください。",
+    console.error("API error:", err);
+    res.status(500).json({
+      ok: false,
+      error: err.message || "サーバ側でエラーが発生しました。",
     });
   }
 }
